@@ -9,20 +9,21 @@ cache:
       - Cargo.lock
   paths:
     - cargo/
-    - vendor/
+    - target/
 
 test:cargo:
   stage: test
   script:
     - rustc --version && cargo --version  # Print version info for debugging
-    - cargo test --workspace --verbose
+    - cargo test
 
 pages:
   stage: deploy
   script:
-    - cargo doc --release --no-deps
+    - cargo doc --no-deps
+    - mv target/doc public
   artifacts:
     paths:
-      - target/doc
+      - public
   only:
     - main
