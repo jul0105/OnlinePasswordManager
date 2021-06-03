@@ -1,18 +1,15 @@
 image: "rust:latest"
 
-workflow:
-  rules:
-    - if: '$CI_COMMIT_BRANCH'
-
 variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo
 
 cache:
   key:
     files:
-        - Cargo.lock
+      - Cargo.lock
   paths:
     - cargo/
+    - vendor/
 
 test:cargo:
   stage: test
@@ -27,5 +24,5 @@ pages:
   artifacts:
     paths:
       - target/doc
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "master"'
+  only:
+    - main
