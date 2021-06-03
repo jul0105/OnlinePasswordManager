@@ -20,6 +20,12 @@ test:cargo:
 pages:
   stage: deploy
   cache:
+    key:
+      files:
+        - Cargo.lock
+    paths:
+      - cargo/
+      - target/
     policy: pull
   script:
     - cargo doc --no-deps
