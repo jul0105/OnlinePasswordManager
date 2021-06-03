@@ -7,3 +7,15 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rand = "0.8.3"
+dotenv = "0.15.0"
+structopt = "0.3.21"
+dialoguer = "0.8.0"
+diesel = { version = "1.4.6", features = ["sqlite"] }
+argon2 = "0.2.0"
+google-authenticator = "0.2.1"
+qr_code = "1.1.0"
+log = "0.4.14"
+simplelog = "0.10.0"
+base64 = "0.13.0"
+sha3 = "0.9.1"
