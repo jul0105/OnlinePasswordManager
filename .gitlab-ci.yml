@@ -18,6 +18,19 @@ image: "rust:latest"
 #   - apt-get install -yqq --no-install-recommends build-essential
 
 # Use cargo to test the project
+
+cache:
+  key:
+    files:
+        - Cargo.lock
+    prefix: ${CI_JOB_NAME}
+  paths:
+    - target/
+    - cargo/
+
+variables:
+  CARGO_HOME: $CI_PROJECT_DIR/cargo
+
 test:cargo:
   script:
     - rustc --version && cargo --version  # Print version info for debugging
