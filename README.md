@@ -9,8 +9,10 @@
 
 ## Package documentation
 
+The online documentation for the crate is available [here](https://jul0105.gitlab.io/SEC_Projet/sec_project/index.html).
+
 Generate the documentation with the following command :
 
 ```
-cargo doc --release --no-deps --open
+cargo doc --no-deps --open
 ```

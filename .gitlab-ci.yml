@@ -19,6 +19,8 @@ test:cargo:
 
 pages:
   stage: deploy
+  cache:
+    policy: pull
   script:
     - cargo doc --no-deps
     - mv target/doc public
