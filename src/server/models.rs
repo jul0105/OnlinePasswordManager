@@ -2,11 +2,13 @@
 
 use crate::server::schema::*;
 
-#[derive(Identifiable, Queryable, Clone, Debug)]
+#[derive(Identifiable, Queryable, Debug)]
+#[table_name = "users"]
 pub struct User {
     pub id: i32,
     pub email: String,
     pub password_hash: String,
+    pub role: String,
     pub totp_secret: Option<String>,
 }
 

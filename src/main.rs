@@ -1,8 +1,10 @@
-use common::hash::compute_password_hash;
+//! Online password manager cli
+
+use dialoguer::{console::Term, theme::ColorfulTheme, Select};
+use dotenv::dotenv;
 use log::LevelFilter;
 use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
 use structopt::StructOpt;
-use dotenv::dotenv;
 
 #[macro_use]
 extern crate diesel;
@@ -28,6 +30,21 @@ fn main() {
         ColorChoice::Auto,
     )
     .unwrap();
+
+    println!("Welcome to password manager\n");
+
+    let items = vec!["Login", "Register"];
+    let selection = Select::with_theme(&ColorfulTheme::default())
+        .with_prompt("Choose an action")
+        .items(&items)
+        .default(0)
+        .interact_on_opt(&Term::stderr())
+        .unwrap();
+
+    match selection {
+        Some(index) => println!("User selected item : {}", items[index]),
+        None => println!("Exiting..."),
+    }
 }
 
 #[cfg(test)]
