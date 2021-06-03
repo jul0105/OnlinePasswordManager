@@ -12,7 +12,6 @@ dotenv = "0.15.0"
 structopt = "0.3.21"
 dialoguer = "0.8.0"
 diesel = { version = "1.4.6", features = ["sqlite"] }
-diesel-derive-enum = { version = "1", features = ["sqlite"] }
 argon2 = "0.2.0"
 google-authenticator = "0.2.1"
 qr_code = "1.1.0"
