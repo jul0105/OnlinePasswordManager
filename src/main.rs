@@ -5,6 +5,7 @@ use dotenv::dotenv;
 use log::LevelFilter;
 use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
 use structopt::StructOpt;
+use crate::client::user_interaction::start_client;
 
 #[macro_use]
 extern crate diesel;
@@ -31,20 +32,7 @@ fn main() {
     )
     .unwrap();
 
-    println!("Welcome to password manager\n");
-
-    let items = vec!["Login", "Register"];
-    let selection = Select::with_theme(&ColorfulTheme::default())
-        .with_prompt("Choose an action")
-        .items(&items)
-        .default(0)
-        .interact_on_opt(&Term::stderr())
-        .unwrap();
-
-    match selection {
-        Some(index) => println!("User selected item : {}", items[index]),
-        None => println!("Exiting..."),
-    }
+    start_client();
 }
 
 #[cfg(test)]

@@ -1,3 +1,5 @@
+//! Password structs
+
 pub struct PasswordIdentification {
     id: u32,
     label: String,
