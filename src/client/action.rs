@@ -5,7 +5,7 @@ use crate::common::error_message::ErrorMessage;
 use crate::client::password::{PasswordIdentification, Password};
 
 pub struct Session {
-    encryption_key: [u8],
+    encryption_key: Vec<u8>, // TODO change to Key type (see sodiumoxide)
     session_token: String,
     encrypted_file: EncryptedFile,
 }
