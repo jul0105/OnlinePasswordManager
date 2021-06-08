@@ -1,1 +1,1 @@
-pub struct EncryptedFile(String); // TODO modify
+pub struct EncryptedFile(pub String); // TODO modify

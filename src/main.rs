@@ -1,6 +1,5 @@
 //! Online password manager cli
 
-use dialoguer::{console::Term, theme::ColorfulTheme, Select};
 use dotenv::dotenv;
 use log::LevelFilter;
 use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
@@ -9,6 +8,9 @@ use crate::client::user_interaction::start_client;
 
 #[macro_use]
 extern crate diesel;
+
+#[macro_use]
+extern crate lazy_static;
 
 mod client;
 mod common;
