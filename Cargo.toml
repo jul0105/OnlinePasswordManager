@@ -11,6 +11,7 @@ rand = "0.8.3"
 dotenv = "0.15.0"
 structopt = "0.3.21"
 dialoguer = "0.8.0"
+console = "0.14.1"
 diesel = { version = "1.4.6", features = ["sqlite"] }
 argon2 = "0.2.0"
 google-authenticator = "0.2.1"
@@ -22,3 +23,4 @@ sha3 = "0.9.1"
 strum = { version = "0.21", features = ["derive"] }
 lazy_static = "1.4.0"
 regex = "1.5.4"
+sodiumoxide = "0.2.6"

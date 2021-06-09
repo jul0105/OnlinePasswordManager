@@ -1,12 +1,16 @@
 //! CLI user interaction
 
 use crate::client::action::Session;
-use dialoguer::Password;
+use crate::common::error_message::ErrorMessage;
+use console::Emoji;
+use console::style;
 use dialoguer::console::Term;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Input;
+use dialoguer::Password;
 use dialoguer::Select;
 use regex::Regex;
+use strum::EnumMessage;
 use strum::IntoEnumIterator;
 
 use super::action::Action;
@@ -38,7 +42,7 @@ pub fn ask_username() -> String {
             if check_email(val) {
                 return Ok(());
             } else {
-                return Err("Email isn't valid. Please try again");
+                return Err("Please enter a valid email address");
             }
         })
         .interact_text()
@@ -57,18 +61,32 @@ pub fn ask_password() -> String {
         .unwrap()
 }
 
-pub fn ask_totp() -> String {
-    todo!()
+pub fn ask_totp_code() -> String {
+    Input::<String>::with_theme(&ColorfulTheme::default())
+        .with_prompt("2FA code")
+        .interact_text()
+        .unwrap()
 }
 
 pub fn ask_login() -> Session {
     loop {
         let username = ask_username();
         let password = ask_password();
-        let totp_code = ""; // TODO ask input
-        match Session::login(&username, &password, totp_code) {
+
+        // First try with no totp code
+        match Session::login(&username, &password, None) {
             Ok(session) => return session,
-            Err(error) => todo!(),
+            Err(error) => match error {
+                ErrorMessage::TotpRequired => loop {
+                    // If totp is required we ask it after we are sure the password is correct
+                    let totp_code = ask_totp_code();
+                    match Session::login(&username, &password, Some(&totp_code)) {
+                        Ok(session) => return session,
+                        Err(e) => display_error(e),
+                    }
+                },
+                e => display_error(e)
+            },
         }
     }
 }
@@ -108,4 +126,11 @@ fn modify_password(session: &Session) {
 
 fn delete_password(session: &Session) {
     todo!();
+}
+
+fn display_error(e: ErrorMessage) {
+    if e.get_message().is_some() {
+        let msg = format!("{} {}. Please try again", Emoji("✘", ""), e.get_message().unwrap());
+        println!("{}", style(&msg).red());
+    }
 }

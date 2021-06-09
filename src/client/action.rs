@@ -1,10 +1,14 @@
 //! Client facade
 
+use sodiumoxide::crypto::secretbox::Key;
 use strum::{EnumIter, EnumString, Display};
 
 use crate::common::encrypted_file::EncryptedFile;
 use crate::common::error_message::ErrorMessage;
 use crate::client::password::{PasswordIdentification, Password};
+use crate::common::hash::compute_password_hash;
+use crate::server::endpoint::authentication;
+use crate::server::endpoint::download;
 
 #[derive(Debug, Clone, Copy, Display, EnumIter, EnumString)]
 pub enum Action {
@@ -19,7 +23,7 @@ pub enum Action {
 }
 
 pub struct Session {
-    encryption_key: Vec<u8>, // TODO change to Key type (see sodiumoxide)
+    encryption_key: Key,
     session_token: String,
     encrypted_file: EncryptedFile,
 }
@@ -29,11 +33,14 @@ impl Session {
     /// Derive encryption key from password
     ///
     /// Return Session if successful authentication. ErrorMessage otherwise
-    pub fn login(username: &str, password: &str, totp_code: &str) -> Result<Session, ErrorMessage> {
+    pub fn login(email: &str, password: &str, totp_code: Option<&str>) -> Result<Session, ErrorMessage> {
+        let auth = compute_password_hash(email, password);
+        let session_token = authentication(email, &auth.master_password_hash, totp_code)?;
+        let encrypted_file = download(&session_token)?;
         Ok(Session {
-            encryption_key: Vec::new(),
-            session_token: String::new(),
-            encrypted_file: EncryptedFile(String::new()),
+            session_token,
+            encrypted_file,
+            encryption_key: Key::from_slice(&auth.master_key).unwrap(),
         })
     }
 

@@ -33,3 +33,7 @@ pub fn get_user(user_email: &str) -> QueryResult<User> {
     let connection = get_connection();
     users.filter(email.eq(user_email)).first::<User>(&connection)
 }
+
+pub fn check_password(user: &User, password_hash: &str) -> bool {
+    user.password_hash == password_hash
+}
