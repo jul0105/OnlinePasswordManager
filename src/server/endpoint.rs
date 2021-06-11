@@ -7,6 +7,7 @@ use crate::common::error_message::ErrorMessage;
 
 use super::repository::check_password;
 use super::repository::get_user;
+use super::repository::new_token;
 
 /// Authenticate user to the server and generate session token
 ///
@@ -19,21 +20,26 @@ pub fn authentication(
     // TODO add logging
     match get_user(email) {
         Ok(user) => {
-            if user.totp_secret.is_some() && totp_code.is_none() {
-                return Err(ErrorMessage::TotpRequired)
-            } else {
-                // Check password
-                if check_password(&user, password) {
+            if check_password(&user, password) {
+                if user.totp_secret.is_some() && totp_code.is_none() {
+                    return Err(ErrorMessage::TotpRequired);
+                } else {
                     // Check totp
                     if user.totp_secret.is_some() && totp_code.is_some() {
                         let auth = GoogleAuthenticator::new();
-                        if !auth.verify_code(&user.totp_secret.unwrap(), totp_code.unwrap(), 3, 0) {
+                        if !auth.verify_code(
+                            &user.totp_secret.as_deref().unwrap(),
+                            totp_code.unwrap(),
+                            3,
+                            0,
+                        ) {
                             return Err(ErrorMessage::InvalidTotpCode);
                         }
                     }
-                    return Ok(String::from("1234"));
+                    return Ok(new_token(&user));
                 }
-                return Err(ErrorMessage::AuthFailed)
+            } else {
+                return Err(ErrorMessage::AuthFailed);
             }
         }
         Err(_) => return Err(ErrorMessage::AuthFailed),

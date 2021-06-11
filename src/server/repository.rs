@@ -2,11 +2,16 @@
 
 use std::env;
 
+use base64::encode;
+use chrono::Duration;
+use chrono::Utc;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
 use diesel::{Connection, QueryResult, SqliteConnection, insert_into};
+use rand::RngCore;
+use rand::rngs::OsRng;
 
-use super::models::{NewUser, User};
+use super::models::*;
 use super::schema::*;
 
 
@@ -36,4 +41,18 @@ pub fn get_user(user_email: &str) -> QueryResult<User> {
 
 pub fn check_password(user: &User, password_hash: &str) -> bool {
     user.password_hash == password_hash
+}
+
+pub fn new_token(user: &User) -> String {
+    use super::schema::tokens::dsl::*;
+    let conn = get_connection();
+    let mut buffer = [0u8; 24];
+    OsRng.fill_bytes(&mut buffer);
+    let result = Token {
+        token: encode(buffer),
+        expire_at: Utc::now().naive_utc() + Duration::hours(1),
+        user_id: user.id
+    };
+    insert_into(tokens).values(&result).execute(&conn).unwrap();
+    return result.token;
 }

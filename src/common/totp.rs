@@ -22,7 +22,8 @@ pub fn check_totp_code(secret: &str) {
 
 pub fn new_totp_secret(email: &str) -> String {
     let auth = GoogleAuthenticator::new();
-    let secret = auth.create_secret(32);
+    // let secret = auth.create_secret(32);
+    let secret = String::from("abcdabcdabcdabcdabcdabcdabcdabcd");
     let qr_code = QrCode::new(format!(
         "otpauth://totp/{}?secret={}&issuer=Password manager",
         email, secret
