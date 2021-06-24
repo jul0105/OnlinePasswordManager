@@ -25,9 +25,9 @@ Before accessing the password file, the client has to authenticate itself to the
 participant client
 participant server
 note over client: Ask username and password to user
-note over client: Hash password ?
 note over client: Derive encryption key from password
 client->server : Send username and password
+note over server: Hash password
 note over server: Authenticate user with password
 note over server: If user is valid, generate session token
 server->client: Return session token
