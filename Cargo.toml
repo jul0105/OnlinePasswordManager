@@ -28,3 +28,4 @@ regex = "1.5.4"
 sodiumoxide = "0.2.6"
 zxcvbn = "2.1.1"
 rand_core = { version = "0.6", features = ["std"] }
+diesel_migrations = "1.4.0"

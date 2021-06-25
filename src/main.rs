@@ -7,12 +7,15 @@ use console::style;
 use dialoguer::{Confirm, theme::ColorfulTheme};
 use dotenv::dotenv;
 use log::LevelFilter;
-use server::repository::add_user;
 use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
 use structopt::StructOpt;
+use crate::server::repository::DatabaseConnection;
 
 #[macro_use]
 extern crate diesel;
+
+#[macro_use]
+extern crate diesel_migrations;
 
 #[macro_use]
 extern crate lazy_static;
@@ -57,7 +60,9 @@ fn main() {
         } else {
             None
         };
-        match add_user(
+
+        let db = DatabaseConnection::new();
+        match db.add_user(
             &email,
             &compute_password_hash(&email, &password).master_password_hash,
             totp_secret.as_deref(),

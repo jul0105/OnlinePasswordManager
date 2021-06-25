@@ -9,6 +9,7 @@ use crate::server::models::User;
 use diesel::result::Error;
 
 use log::{error, warn, info};
+use crate::server::repository::DatabaseConnection;
 
 /// Authenticate user to the server and generate session token
 ///
@@ -17,11 +18,13 @@ pub fn authentication(email: &str, password: &str, totp_code: Option<&str>) -> R
     // The entire authentication process is executed, even if invalid, to try to mitigate timing attack
     let mut is_valid = true;
 
+    let db = DatabaseConnection::new();
+
     // Hash password
     let hashed_password = password::store(password.as_bytes());
 
     // Check if the email, password pair exist in DB
-    let totp_secret = match repository::auth_user(email, hashed_password.as_str()) {
+    let totp_secret = match db.auth_user(email, hashed_password.as_str()) {
         Ok(user) => user.totp_secret,
         Err(_) => {
             is_valid = false;
@@ -50,8 +53,8 @@ pub fn authentication(email: &str, password: &str, totp_code: Option<&str>) -> R
         let token = token::generate_token();
 
         // Store whole token in DB
-        match repository::get_user(email) {
-            Ok(user) => repository::add_token(&user, &token),
+        match db.get_user(email) {
+            Ok(user) => db.add_token(&user, &token),
             Err(_) => return Err(ErrorMessage::ServerSideError)
         }
 
@@ -75,4 +78,42 @@ pub fn download(session_token: &str) -> Result<EncryptedFile, ErrorMessage> {
 /// Return Ok if upload successful. ErrorMessage otherwise
 pub fn upload(session_token: &str, file_content: EncryptedFile) -> Result<(), ErrorMessage> {
     todo!();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use diesel::{SqliteConnection, Connection};
+    use std::env;
+    use dotenv::dotenv;
+
+
+    // This macro from `diesel_migrations` defines an `embedded_migrations` module
+    // containing a function named `run`. This allows the example to be run and
+    // tested without any outside setup of the database.
+    embed_migrations!("migrations");
+
+
+    /// Get a clean db connection to the test-specific DB environment
+    fn get_test_db() -> DatabaseConnection {
+        // Retrieve .env config
+        dotenv().ok();
+        // Get connection from the test sqlite db
+        let database_url = env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set");
+        let conn = SqliteConnection::establish(&database_url).expect("Impossible to connect to database");
+
+        // Execute migration to have a clean db
+        embedded_migrations::run(&conn).expect("Migration not possible to run");
+
+        DatabaseConnection {
+            conn,
+        }
+    }
+
+    #[test]
+    fn test() {
+        let db = get_test_db();
+
+        db.get_user("dwa");
+    }
 }

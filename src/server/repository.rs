@@ -14,61 +14,63 @@ use rand::rngs::OsRng;
 use super::models::*;
 use super::schema::*;
 
-
-pub fn get_connection() -> SqliteConnection {
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    SqliteConnection::establish(&database_url).expect("Impossible to connect to database")
+pub struct DatabaseConnection {
+    pub conn: SqliteConnection
 }
 
-pub fn add_user(email: &str, password_hash: &str, totp_secret: Option<&str>) -> QueryResult<usize> {
-    let connection = get_connection();
-    let new_user = NewUser {
-        email,
-        password_hash,
-        totp_secret,
-    };
-    insert_into(users::table)
-        .values(&new_user)
-        .execute(&connection)
-}
+impl DatabaseConnection {
+    pub fn new() -> DatabaseConnection {
+        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let conn = SqliteConnection::establish(&database_url).expect("Impossible to connect to database");
 
-pub fn get_user(user_email: &str) -> QueryResult<User> {
-    use super::schema::users::dsl::*;
+        DatabaseConnection {
+            conn,
+        }
+    }
 
-    let connection = get_connection();
-    users.filter(email.eq(user_email)).first::<User>(&connection)
-}
+    pub fn add_user(&self, email: &str, password_hash: &str, totp_secret: Option<&str>) -> QueryResult<usize> {
+        let new_user = NewUser {
+            email,
+            password_hash,
+            totp_secret,
+        };
+        insert_into(users::table)
+            .values(&new_user)
+            .execute(&self.conn)
+    }
 
-pub fn auth_user(user_email: &str, hashed_password: &str) -> QueryResult<User> {
-    use super::schema::users::dsl::*;
+    pub fn get_user(&self, user_email: &str) -> QueryResult<User> {
+        use super::schema::users::dsl::*;
 
-    let connection = get_connection();
-    users.filter(email.eq(user_email).and(password_hash.eq(hashed_password))).first::<User>(&connection)
-}
+        users.filter(email.eq(user_email)).first::<User>(&self.conn)
+    }
 
-pub fn add_token(user: &User, token: &crate::server::authentication::token::Token) {
-    todo!();
-    delete_expired_token(user);
-}
+    pub fn auth_user(&self, user_email: &str, hashed_password: &str) -> QueryResult<User> {
+        use super::schema::users::dsl::*;
 
-pub fn delete_expired_token(user: &User) {
-    todo!();
-}
+        users.filter(email.eq(user_email).and(password_hash.eq(hashed_password))).first::<User>(&self.conn)
+    }
 
-pub fn check_password(user: &User, password_hash: &str) -> bool {
-    user.password_hash == password_hash
-}
+    pub fn add_token(&self, user: &User, token: &crate::server::authentication::token::Token) {
+        todo!();
+        self.delete_expired_token(user);
+    }
 
-pub fn new_token(user: &User) -> String {
-    use super::schema::tokens::dsl::*;
-    let conn = get_connection();
-    let mut buffer = [0u8; 24];
-    OsRng.fill_bytes(&mut buffer);
-    let result = Token {
-        token: encode(buffer),
-        expire_at: Utc::now().naive_utc() + Duration::hours(1),
-        user_id: user.id
-    };
-    insert_into(tokens).values(&result).execute(&conn).unwrap();
-    return result.token;
+    pub fn delete_expired_token(&self, user: &User) {
+        todo!();
+    }
+
+    pub fn new_token(&self, user: &User) -> String {
+        use super::schema::tokens::dsl::*;
+
+        let mut buffer = [0u8; 24];
+        OsRng.fill_bytes(&mut buffer);
+        let result = Token {
+            token: encode(buffer),
+            expire_at: Utc::now().naive_utc() + Duration::hours(1),
+            user_id: user.id
+        };
+        insert_into(tokens).values(&result).execute(&self.conn).unwrap();
+        return result.token;
+    }
 }
