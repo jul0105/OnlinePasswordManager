@@ -4,3 +4,4 @@ pub mod schema;
 pub mod models;
 pub mod repository;
 pub mod endpoint;
+mod authentication;
