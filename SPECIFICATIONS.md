@@ -14,6 +14,7 @@
     - role admin : add and delete users
 - All activities on the server are **logged**
 - Transmission between client and server are made on HTTPS
+- User use 2FA authenticator to generate a Time-based One Time Password (TOTP).
 
 ## 2. Interactions between client and server
 
@@ -26,9 +27,9 @@ participant client
 participant server
 note over client: Ask username and password to user
 note over client: Derive encryption key from password
-client->server : Send username and password
+client->server : Send username, password and TOTP
 note over server: Hash password
-note over server: Authenticate user with password
+note over server: Authenticate user with email, password and TOTP
 note over server: If user is valid, generate session token
 server->client: Return session token
 ```
