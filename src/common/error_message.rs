@@ -9,5 +9,8 @@ pub enum ErrorMessage {
     InvalidTotpCode,
 
     #[strum(message = "Incorrect email or password")]
-    AuthFailed
+    AuthFailed,
+
+    #[strum(message = "Sorry, an error happened on our side. Please try again.")]
+    ServerSideError
 }

@@ -46,6 +46,15 @@ pub fn auth_user(user_email: &str, hashed_password: &str) -> QueryResult<User> {
     users.filter(email.eq(user_email).and(password_hash.eq(hashed_password))).first::<User>(&connection)
 }
 
+pub fn add_token(user: &User, token: &crate::server::authentication::token::Token) {
+    todo!();
+    delete_expired_token(user);
+}
+
+pub fn delete_expired_token(user: &User) {
+    todo!();
+}
+
 pub fn check_password(user: &User, password_hash: &str) -> bool {
     user.password_hash == password_hash
 }

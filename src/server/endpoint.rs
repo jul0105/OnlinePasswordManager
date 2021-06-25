@@ -48,11 +48,14 @@ pub fn authentication(email: &str, password: &str, totp_code: Option<&str>) -> R
     if is_valid {
         // If yes, generate and return a session token
         let token = token::generate_token();
-        // TODO Store whole token in DB
 
+        // Store whole token in DB
+        match repository::get_user(email) {
+            Ok(user) => repository::add_token(&user, &token),
+            Err(_) => return Err(ErrorMessage::ServerSideError)
+        }
 
         info!("User {} successfully authenticated with the server.", email);
-
         Ok(token.token)
     } else {
         // If no, return a generic error message
