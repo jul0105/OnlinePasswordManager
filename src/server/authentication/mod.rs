@@ -1,6 +1,6 @@
 
 
-mod authenticator;
-mod email;
-mod password;
-mod token;
+pub mod authenticator;
+pub mod email;
+pub mod password;
+pub mod token;
