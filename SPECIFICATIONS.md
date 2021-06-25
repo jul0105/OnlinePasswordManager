@@ -14,7 +14,15 @@
     - role admin : add and delete users
 - All activities on the server are **logged**
 - Transmission between client and server are made on HTTPS
+
+
+
+Bonus ? :)
+
 - User use 2FA authenticator to generate a Time-based One Time Password (TOTP).
+
+- Trying to mitigate timing attack by making (sort of) time-constant server endpoint
+- Using Diesel for DB management 
 
 ## 2. Interactions between client and server
 
