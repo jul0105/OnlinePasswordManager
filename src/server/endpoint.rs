@@ -1,48 +1,62 @@
 //! Server facade
 
-use google_authenticator::GoogleAuthenticator;
-
 use crate::common::encrypted_file::EncryptedFile;
 use crate::common::error_message::ErrorMessage;
 
-use super::repository::check_password;
-use super::repository::get_user;
-use super::repository::new_token;
+use crate::server::authentication::{password, authenticator, token};
+use crate::server::repository;
+use crate::server::models::User;
+use diesel::result::Error;
+
+use log::{error, warn, info};
 
 /// Authenticate user to the server and generate session token
 ///
 /// Return session token if successful authentication, Error message otherwise
-pub fn authentication(
-    email: &str,
-    password: &str,
-    totp_code: Option<&str>,
-) -> Result<String, ErrorMessage> {
-    // TODO add logging
-    match get_user(email) {
-        Ok(user) => {
-            if check_password(&user, password) {
-                if user.totp_secret.is_some() && totp_code.is_none() {
-                    return Err(ErrorMessage::TotpRequired);
-                } else {
-                    // Check totp
-                    if user.totp_secret.is_some() && totp_code.is_some() {
-                        let auth = GoogleAuthenticator::new();
-                        if !auth.verify_code(
-                            &user.totp_secret.as_deref().unwrap(),
-                            totp_code.unwrap(),
-                            3,
-                            0,
-                        ) {
-                            return Err(ErrorMessage::InvalidTotpCode);
-                        }
-                    }
-                    return Ok(new_token(&user));
-                }
-            } else {
-                return Err(ErrorMessage::AuthFailed);
+pub fn authentication(email: &str, password: &str, totp_code: Option<&str>) -> Result<String, ErrorMessage> {
+    // The entire authentication process is executed, even if invalid, to try to mitigate timing attack
+    let mut is_valid = true;
+
+    // Hash password
+    let hashed_password = password::store(password.as_bytes());
+
+    // Check if the email, password pair exist in DB
+    let totp_secret = match repository::auth_user(email, hashed_password.as_str()) {
+        Ok(user) => user.totp_secret,
+        Err(_) => {
+            is_valid = false;
+            warn!("User {} failed to authenticate with the server. The provided email-password combination is not present in DB.", email);
+            None
+        }
+    };
+
+    // Check if the totp code match the user in DB
+    match totp_secret {
+        None => {} // Normal behavior. User opted out of 2FA
+        Some(secret) => match totp_code {
+            None => {
+                is_valid = false;
+                warn!("User {} didn't provide a required TOTP code during authentication with the server", email);
+            }
+            Some(code) => if !authenticator::verify_code(secret.as_str(), code) {
+                is_valid = false;
+                warn!("User {} provided an invalid TOTP code during authentication with the server", email);
             }
         }
-        Err(_) => return Err(ErrorMessage::AuthFailed),
+    }
+
+    if is_valid {
+        // If yes, generate and return a session token
+        let token = token::generate_token();
+        // TODO Store whole token in DB
+
+
+        info!("User {} successfully authenticated with the server.", email);
+
+        Ok(token.token)
+    } else {
+        // If no, return a generic error message
+        Err(ErrorMessage::AuthFailed)
     }
 }
 

@@ -82,6 +82,7 @@ fn check_password_strength(password: &str) -> Result<(), Option<feedback::Feedba
 /// Return PHC string ($argon2id$v=19$...)
 pub fn store(password: &[u8]) -> String {
     ARGON2.hash_password_simple(password, SaltString::generate(&mut OsRng).as_ref()).unwrap().to_string()
+    // TODO change parameters
 }
 
 /// Verify password against PHC string using Argon2id

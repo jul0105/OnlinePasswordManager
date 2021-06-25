@@ -34,8 +34,8 @@ impl Session {
     ///
     /// Return Session if successful authentication. ErrorMessage otherwise
     pub fn login(email: &str, password: &str, totp_code: Option<&str>) -> Result<Session, ErrorMessage> {
-        let auth = compute_password_hash(email, password);
-        let session_token = authentication(email, &auth.master_password_hash, totp_code)?;
+        let auth = compute_password_hash(email, password); // TODO modify this function
+        let session_token = authentication(email, password, totp_code)?;
         let encrypted_file = download(&session_token)?;
         Ok(Session {
             session_token,

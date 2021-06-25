@@ -15,9 +15,9 @@ pub struct Token {
     validity_end: SystemTime,
 }
 
-// Token is valid during 15 minutes
-const VALIDITY_DURATION: u64 = 60 * 15;
-const TOKEN_LENGTH: usize = 32;
+// Token is valid during 24 hours minutes
+const VALIDITY_DURATION: u64 = 24 * 60 * 60;
+const TOKEN_LENGTH: usize = 64;
 
 /// Generate a new random token
 ///

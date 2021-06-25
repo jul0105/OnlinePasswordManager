@@ -39,6 +39,13 @@ pub fn get_user(user_email: &str) -> QueryResult<User> {
     users.filter(email.eq(user_email)).first::<User>(&connection)
 }
 
+pub fn auth_user(user_email: &str, hashed_password: &str) -> QueryResult<User> {
+    use super::schema::users::dsl::*;
+
+    let connection = get_connection();
+    users.filter(email.eq(user_email).and(password_hash.eq(hashed_password))).first::<User>(&connection)
+}
+
 pub fn check_password(user: &User, password_hash: &str) -> bool {
     user.password_hash == password_hash
 }
