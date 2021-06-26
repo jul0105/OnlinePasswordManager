@@ -1,24 +1,16 @@
 //! Used database related actions
 
-use std::env;
-
-use base64::encode;
-use chrono::DateTime;
-use chrono::Duration;
-use chrono::Utc;
+use super::models::*;
+use super::schema::*;
+use crate::common::error_message::ErrorMessage;
+use crate::server::authentication::password::hash;
+use crate::server::authentication::token::validate_token;
+use crate::server::repository::tokens::dsl::tokens;
+use crate::server::schema::tokens::dsl::user_id;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
 use diesel::{insert_into, Connection, QueryResult, SqliteConnection};
-use rand::rngs::OsRng;
-use rand::RngCore;
-
-use crate::common::error_message::ErrorMessage;
-
-use super::models::*;
-use super::schema::*;
-use crate::server::authentication::password::hash;
-use crate::server::repository::tokens::dsl::tokens;
-use crate::server::schema::tokens::dsl::user_id;
+use std::env;
 
 pub struct DatabaseConnection {
     pub conn: SqliteConnection,
@@ -63,10 +55,6 @@ impl DatabaseConnection {
         // self.delete_expired_token(user);
     }
 
-    pub fn get_user_tokens(&self, user: i32) -> QueryResult<Vec<Token>> {
-        tokens.filter(user_id.eq(user)).load::<Token>(&self.conn)
-    }
-
     pub fn delete_expired_token(&self, user: &User) {
         todo!();
     }
@@ -80,13 +68,8 @@ impl DatabaseConnection {
             .first::<(User, Token)>(&self.conn)
         {
             Ok((user_found, token_found)) => {
-                let now = Utc::now();
-                // TODO check validity start
-                if DateTime::<Utc>::from_utc(token_found.validity_end, Utc) <= now {
-                    return Ok(user_found);
-                } else {
-                    return Err(ErrorMessage::TokenExpired);
-                }
+                validate_token(&token_found)?;
+                Ok(user_found)
             }
             Err(_) => return Err(ErrorMessage::NoUserFound),
         }
@@ -131,7 +114,7 @@ pub mod tests {
 
     #[test]
     fn test() {
-        let (db, td) = get_test_db();
+        let (db, _) = get_test_db();
 
         assert!(db
             .add_user("julien@heig-vd.com", "password hash", None)
@@ -141,25 +124,14 @@ pub mod tests {
 
     #[test]
     fn test_add_token() {
-        let (db, td) = get_test_db();
+        let (db, _) = get_test_db();
 
         let id_user = 0;
         let token = token::generate_token(id_user);
 
         db.add_token(&token);
-        let token_bis = db.get_user_tokens(id_user);
-        assert!(token_bis.is_ok());
-        assert_eq!(token, token_bis.unwrap()[0]);
-
-        let token2 = token::generate_token(id_user);
-
-        db.add_token(&token2);
-        let token2_bis = db.get_user_tokens(id_user);
-        assert!(&token2_bis.is_ok());
-
-        let result = token2_bis.unwrap();
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0], token);
-        assert_eq!(result[1], token2);
+        let user = db.get_user_from_token(&token.token);
+        assert!(user.is_ok());
+        assert_eq!(id_user, user.unwrap().id);
     }
 }

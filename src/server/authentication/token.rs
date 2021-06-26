@@ -3,10 +3,11 @@
 //!
 //! Random token generation and verification
 
-use chrono::{Duration, NaiveDateTime, Utc};
+use chrono::{Duration, Utc};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 
+use crate::common::error_message::ErrorMessage;
 use crate::server::models::Token;
 
 // Token is valid during 24 hours minutes
@@ -36,40 +37,13 @@ pub fn generate_token(user_id: i32) -> Token {
     }
 }
 
-/// Verify that a given token match the stored token and check token's time validity
-///
-/// Return true if shared token is valid, false otherwise
-pub fn verify_token(user_id: i32, shared_token: &str, stored_token: Option<&Token>) -> bool {
-    // Generate default token to try to mitigate timing attack
-    let default_token = generate_token(user_id);
-    let mut result = true;
-
-    // Get stored token
-    let token = match stored_token {
-        None => {
-            result = false;
-            &default_token
-        }
-        Some(val) => val,
-    };
-
-    // token must be equal
-    if token.token != shared_token {
-        result = false;
-    }
-
-    // Check validity time
+pub fn validate_token(token: &Token) -> Result<(), ErrorMessage> {
     let now = Utc::now().naive_utc();
-    if token.validity_start > now || now > token.validity_end {
-        result = false;
+    if now < token.validity_start || now > token.validity_end {
+        return Err(ErrorMessage::TokenExpired);
+    } else {
+        return Ok(());
     }
-
-    // Check user
-    if token.user_id != user_id {
-        result = false;
-    }
-
-    result
 }
 
 #[cfg(test)]
@@ -96,23 +70,30 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_token() {
-        let token1 = generate_token(0);
-        let token2 = generate_token(0);
+    fn test_validate_valid_token() {
+        let token = generate_token(0);
+        assert!(validate_token(&token).is_ok());
+    }
 
-        assert!(verify_token(0, token1.token.as_str(), Some(&token1)));
+    #[test]
+    fn test_validate_invalid_token() {
+        let token = Token {
+            token: String::new(),
+            validity_start: Utc::now().naive_utc() - Duration::days(7),
+            validity_end: Utc::now().naive_utc() - Duration::days(5),
+            user_id: 0,
+        };
+        assert!(validate_token(&token).is_err());
+    }
 
-        assert!(!verify_token(0, "", Some(&token1)));
-        assert!(!verify_token(0, "test", Some(&token1)));
-        assert!(!verify_token(
-            0,
-            "D1tCRPxvvJoX518rskUcSmweYMQw09nT",
-            Some(&token1)
-        ));
-        assert!(!verify_token(0, token2.token.as_str(), Some(&token1)));
-
-        assert!(!verify_token(0, token1.token.as_str(), None));
-
-        assert!(!verify_token(1, token1.token.as_str(), Some(&token1)));
+    #[test]
+    fn test_validate_invalid_token2() {
+        let token = Token {
+            token: String::new(),
+            validity_start: Utc::now().naive_utc() + Duration::days(7),
+            validity_end: Utc::now().naive_utc() + Duration::days(5),
+            user_id: 0,
+        };
+        assert!(validate_token(&token).is_err());
     }
 }
