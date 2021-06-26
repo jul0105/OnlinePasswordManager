@@ -3,8 +3,7 @@
 use sodiumoxide::crypto::secretbox::Key;
 use strum::{Display, EnumIter, EnumString};
 
-use crate::client::password::{Password, PasswordIdentification};
-use crate::common::encrypted_file::EncryptedFile;
+use crate::common::encrypted_file::ProtectedRegistry;
 use crate::common::error_message::ErrorMessage;
 use crate::common::hash::compute_password_hash;
 use crate::server::endpoint::authentication;
@@ -25,7 +24,7 @@ pub enum Action {
 pub struct Session {
     encryption_key: Key,
     session_token: String,
-    encrypted_file: EncryptedFile,
+    encrypted_file: Option<ProtectedRegistry>,
 }
 
 impl Session {
@@ -40,7 +39,7 @@ impl Session {
     ) -> Result<Session, ErrorMessage> {
         let auth = compute_password_hash(email, password); // TODO modify this function
         let session_token = authentication(email, &auth.master_password_hash, totp_code)?;
-        let encrypted_file = download(&session_token)?;
+        let encrypted_file = download(&session_token).map_or(None, |reg| Some(reg));
         Ok(Session {
             session_token,
             encrypted_file,
@@ -49,14 +48,14 @@ impl Session {
     }
 
     /// Get list of passwords labels
-    pub fn get_labels(&self) -> Result<Vec<PasswordIdentification>, ErrorMessage> {
+    pub fn get_labels(&self) -> Result<Vec<String>, ErrorMessage> {
         todo!();
     }
 
     /// Get full password's infos for the given password id
     ///
     /// Return Password struct if valid id. ErrorMessage otherwise
-    pub fn read_password(&self, password_id: u32) -> Result<Password, ErrorMessage> {
+    pub fn read_password(&self, password_id: u32) -> Result<String, ErrorMessage> {
         todo!();
     }
 

@@ -12,5 +12,14 @@ pub enum ErrorMessage {
     AuthFailed,
 
     #[strum(message = "Sorry, an error happened on our side. Please try again.")]
-    ServerSideError
+    ServerSideError,
+
+    #[strum(message = "User not found")]
+    NoUserFound,
+
+    #[strum(message = "Token no longer valid")]
+    TokenExpired,
+
+    #[strum(message = "Protected registry does not exist")]
+    ProtectedRegistryDoesNotExist,
 }

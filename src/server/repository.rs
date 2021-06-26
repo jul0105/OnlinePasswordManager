@@ -3,6 +3,7 @@
 use std::env;
 
 use base64::encode;
+use chrono::DateTime;
 use chrono::Duration;
 use chrono::Utc;
 use diesel::prelude::*;
@@ -10,6 +11,8 @@ use diesel::RunQueryDsl;
 use diesel::{insert_into, Connection, QueryResult, SqliteConnection};
 use rand::rngs::OsRng;
 use rand::RngCore;
+
+use crate::common::error_message::ErrorMessage;
 
 use super::models::*;
 use super::schema::*;
@@ -66,6 +69,27 @@ impl DatabaseConnection {
 
     pub fn delete_expired_token(&self, user: &User) {
         todo!();
+    }
+
+    pub fn get_user_from_token(&self, given_token: &str) -> Result<User, ErrorMessage> {
+        use super::schema::tokens::dsl::*;
+        use super::schema::users::dsl::*;
+        match users
+            .inner_join(tokens)
+            .filter(token.eq(given_token))
+            .first::<(User, Token)>(&self.conn)
+        {
+            Ok((user_found, token_found)) => {
+                let now = Utc::now();
+                // TODO check validity start
+                if DateTime::<Utc>::from_utc(token_found.validity_end, Utc) <= now {
+                    return Ok(user_found);
+                } else {
+                    return Err(ErrorMessage::TokenExpired);
+                }
+            }
+            Err(_) => return Err(ErrorMessage::NoUserFound),
+        }
     }
 }
 

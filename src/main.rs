@@ -1,7 +1,7 @@
 //! Online password manager cli
 
 use crate::client::user_interaction::{ask_totp_code, start_client};
-use crate::server::authentication::totp::{display_totp, generate_secret, verify_code};
+use crate::server::authentication::totp::{display_totp, verify_code};
 use crate::server::repository::DatabaseConnection;
 use client::user_interaction::{ask_email, ask_password};
 use common::hash::compute_password_hash;

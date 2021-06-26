@@ -1,15 +1,17 @@
 //! Server facade
 
-use crate::common::encrypted_file::EncryptedFile;
 use crate::common::error_message::ErrorMessage;
 
 use crate::server::authentication::{password, token, totp};
-use crate::server::models::User;
-use crate::server::repository;
-use diesel::result::Error;
 
-use crate::server::repository::DatabaseConnection;
-use log::{error, info, warn};
+use log::{info, warn};
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
+
+use crate::common::encrypted_file::ProtectedRegistry;
+
+use super::repository::DatabaseConnection;
 
 /// Authenticate user to the server and generate session token
 ///
@@ -77,14 +79,26 @@ pub fn authentication(
 /// Download user's encrypted password file
 ///
 /// Return encrypted file if session token is valid and user has permission to read the file. ErrorMessage otherwise
-pub fn download(session_token: &str) -> Result<EncryptedFile, ErrorMessage> {
-    todo!();
+pub fn download(session_token: &str) -> Result<ProtectedRegistry, ErrorMessage> {
+    let db = DatabaseConnection::new();
+
+    match db.get_user_from_token(session_token) {
+        Ok(user) => match File::open(Path::new("server_data").join(user.id.to_string())) {
+            Ok(mut file) => {
+                let mut buffer = Vec::new();
+                file.read_to_end(&mut buffer).unwrap();
+                return Ok(ProtectedRegistry::new(buffer));
+            }
+            Err(_) => return Err(ErrorMessage::ProtectedRegistryDoesNotExist),
+        },
+        Err(error) => return Err(error),
+    }
 }
 
 /// Upload (Override) user's stored password file with the given encrypted file
 ///
 /// Return Ok if upload successful. ErrorMessage otherwise
-pub fn upload(session_token: &str, file_content: EncryptedFile) -> Result<(), ErrorMessage> {
+pub fn upload(session_token: &str, file_content: ProtectedRegistry) -> Result<(), ErrorMessage> {
     todo!();
 }
 
