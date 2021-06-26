@@ -3,8 +3,8 @@
 use sodiumoxide::crypto::aead::Key;
 use strum::{Display, EnumIter, EnumString};
 
+use crate::client::hash::compute_password_hash;
 use crate::common::error_message::ErrorMessage;
-use crate::common::hash::compute_password_hash;
 use crate::common::protected_registry::{PasswordEntry, Registry};
 use crate::server::endpoint::download;
 use crate::server::endpoint::{authentication, upload};
@@ -24,7 +24,7 @@ pub enum Action {
 pub struct Session {
     master_key: Key,
     session_token: String,
-    registry: Registry,
+    pub registry: Registry,
 }
 
 impl Session {
@@ -48,11 +48,6 @@ impl Session {
         })
     }
 
-    /// Get list of passwords labels
-    pub fn get_entries(&self) -> Vec<PasswordEntry> {
-        return self.registry.entries.clone();
-    }
-
     /// Add a new password to the password manager.
     /// Encrypt password file and upload it to the server.
     ///
@@ -68,9 +63,7 @@ impl Session {
             username: username.to_owned(),
             password: password.to_owned(),
         });
-        let protected_registry = self.registry.encrypt(&self.master_key);
-        upload(&self.session_token, protected_registry)?;
-        Ok(())
+        self.seal_and_send()
     }
 
     /// Modify given password in the password manager.
@@ -91,7 +84,14 @@ impl Session {
     /// Encrypt password file and upload it to the server.
     ///
     /// Return ErrorMessage if the password cannot be deleted. Ok(()) otherwise
-    pub fn delete_password(&self, password_id: u32) -> Result<(), ErrorMessage> {
-        todo!();
+    pub fn delete_password(&mut self, index: usize) -> Result<(), ErrorMessage> {
+        self.registry.entries.remove(index);
+        self.seal_and_send()
+    }
+
+    fn seal_and_send(&self) -> Result<(), ErrorMessage> {
+        let protected_registry = self.registry.encrypt(&self.master_key);
+        upload(&self.session_token, protected_registry)?;
+        Ok(())
     }
 }

@@ -2,13 +2,14 @@
 
 use crate::client::action::Session;
 use crate::common::error_message::ErrorMessage;
+use crate::common::protected_registry::Registry;
 use console::style;
 use console::Emoji;
 use dialoguer::console::Term;
 use dialoguer::theme::ColorfulTheme;
-use dialoguer::Input;
 use dialoguer::Password;
 use dialoguer::Select;
+use dialoguer::{Confirm, Input};
 use strum::EnumMessage;
 use strum::IntoEnumIterator;
 
@@ -109,23 +110,26 @@ fn handle_action(session: &mut Session, action: Action) {
     }
 }
 
-fn read_password(session: &Session) {
-    let entries = session.get_entries();
-    let labels = entries
+fn select_password_entry(registry: &Registry) -> Option<usize> {
+    let labels = registry
+        .entries
         .iter()
         .map(|entry| entry.label.clone())
         .collect::<Vec<String>>();
 
-    let selection = Select::with_theme(&ColorfulTheme::default())
+    Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Choose a label")
         .paged(true)
         .items(&labels)
         .default(0)
         .interact_on_opt(&Term::stderr())
-        .unwrap();
+        .unwrap()
+}
 
+fn read_password(session: &Session) {
+    let selection = select_password_entry(&session.registry);
     if let Some(index) = selection {
-        println!("\n{}", entries[index]);
+        println!("\n{}", session.registry.entries[index]);
     }
 }
 
@@ -152,8 +156,31 @@ fn ask_new_password() -> String {
 
 fn add_new_password(session: &mut Session) {
     let label = ask_label();
+
+    // Check if the label exists, ask the user in this case
+    if session
+        .registry
+        .entries
+        .iter()
+        .find(|e| e.label == label)
+        .is_some()
+    {
+        if !Confirm::with_theme(&ColorfulTheme::default())
+            .with_prompt(format!(
+                "Label '{}' already exists. Would you like to add it anyway ?",
+                label
+            ))
+            .default(false)
+            .interact()
+            .unwrap()
+        {
+            return;
+        }
+    }
+
     let username = ask_username();
     let new_password = ask_new_password();
+
     match session.add_password(&label, &username, &new_password) {
         Ok(_) => {
             println!(
@@ -169,8 +196,21 @@ fn modify_password(session: &Session) {
     todo!();
 }
 
-fn delete_password(session: &Session) {
-    todo!();
+fn delete_password(session: &mut Session) {
+    let selection = select_password_entry(&session.registry);
+    if let Some(index) = selection {
+        match session.delete_password(index) {
+            Ok(_) => println!(
+                "{}",
+                style(format!(
+                    "\n{} Password successfully deleted",
+                    Emoji("✔", "")
+                ))
+                .green()
+            ),
+            Err(e) => display_error(e),
+        }
+    }
 }
 
 fn display_error(e: ErrorMessage) {

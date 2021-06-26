@@ -3,8 +3,8 @@
 use crate::client::user_interaction::{ask_totp_code, start_client};
 use crate::server::authentication::totp::{display_totp, verify_code};
 use crate::server::repository::DatabaseConnection;
+use client::hash::compute_password_hash;
 use client::user_interaction::{ask_email, ask_password};
-use common::hash::compute_password_hash;
 use console::style;
 use dialoguer::{theme::ColorfulTheme, Confirm};
 use dotenv::dotenv;
