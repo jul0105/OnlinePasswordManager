@@ -1,7 +1,7 @@
 //! Server module
 
-pub mod schema;
+pub mod authentication;
+pub mod endpoint;
 pub mod models;
 pub mod repository;
-pub mod endpoint;
-mod authentication;
+pub mod schema;

@@ -1,12 +1,11 @@
-/// SEC : Labo 2 - Authentication
-/// Author : Julien Béguin
-/// Date : 23.05.2021
-///
-/// Random token generation and verification
+//! Author : Julien Béguin & Gil Balsiger
+//! Date : 26.06.2021
+//!
+//! Random token generation and verification
 
-use rand::{Rng, thread_rng};
+use chrono::{Duration, NaiveDateTime, Utc};
 use rand::distributions::Alphanumeric;
-use chrono::{NaiveDateTime, Utc, Duration};
+use rand::{thread_rng, Rng};
 
 use crate::server::models::Token;
 
@@ -20,7 +19,9 @@ const TOKEN_LENGTH: usize = 64;
 pub fn generate_token(user_id: i32) -> Token {
     // Validity date
     let validity_start = Utc::now().naive_utc();
-    let validity_end = validity_start.checked_add_signed(Duration::seconds(VALIDITY_DURATION)).unwrap();
+    let validity_end = validity_start
+        .checked_add_signed(Duration::seconds(VALIDITY_DURATION))
+        .unwrap();
 
     // Generate random token
     let token: String = thread_rng()
@@ -81,7 +82,10 @@ mod tests {
     fn test_generate_token() {
         let token = generate_token(0);
         assert!(token.token.len() > 24);
-        assert_eq!(token.validity_start + Duration::seconds(VALIDITY_DURATION), token.validity_end);
+        assert_eq!(
+            token.validity_start + Duration::seconds(VALIDITY_DURATION),
+            token.validity_end
+        );
 
         let now = Utc::now().naive_utc();
         assert!(token.validity_start <= now && now <= token.validity_end);
@@ -102,7 +106,11 @@ mod tests {
 
         assert!(!verify_token(0, "", Some(&token1)));
         assert!(!verify_token(0, "test", Some(&token1)));
-        assert!(!verify_token(0, "D1tCRPxvvJoX518rskUcSmweYMQw09nT", Some(&token1)));
+        assert!(!verify_token(
+            0,
+            "D1tCRPxvvJoX518rskUcSmweYMQw09nT",
+            Some(&token1)
+        ));
         assert!(!verify_token(0, token2.token.as_str(), Some(&token1)));
 
         assert!(!verify_token(0, token1.token.as_str(), None));

@@ -3,7 +3,6 @@
 use chrono::NaiveDateTime;
 
 use crate::server::schema::*;
-use std::time::SystemTime;
 
 #[derive(Identifiable, Queryable, Debug)]
 #[table_name = "users"]

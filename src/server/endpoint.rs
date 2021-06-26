@@ -3,7 +3,7 @@
 use crate::common::encrypted_file::EncryptedFile;
 use crate::common::error_message::ErrorMessage;
 
-use crate::server::authentication::{authenticator, password, token};
+use crate::server::authentication::{password, token, totp};
 use crate::server::models::User;
 use crate::server::repository;
 use diesel::result::Error;
@@ -51,7 +51,7 @@ pub fn authentication(
                 warn!("User {} didn't provide a required TOTP code during authentication with the server", email);
             }
             Some(code) => {
-                if !authenticator::verify_code(secret.as_str(), code) {
+                if !totp::verify_code(secret.as_str(), code) {
                     result = Err(ErrorMessage::AuthFailed);
                     warn!("User {} provided an invalid TOTP code during authentication with the server", email);
                 }

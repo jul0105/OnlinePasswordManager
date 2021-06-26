@@ -52,19 +52,11 @@ impl DatabaseConnection {
         users.filter(email.eq(user_email)).first::<User>(&self.conn)
     }
 
-    pub fn auth_user(&self, user_email: &str, hashed_password: &str) -> QueryResult<User> {
-        use super::schema::users::dsl::*;
-
-        users
-            .filter(email.eq(user_email).and(password_hash.eq(hashed_password)))
-            .first::<User>(&self.conn)
-    }
-
     pub fn add_token(&self, new_token: &Token) {
         use super::schema::tokens::dsl::*;
 
         insert_into(tokens).values(new_token).execute(&self.conn);
-
+        // TODO handle result
         // self.delete_expired_token(user);
     }
 

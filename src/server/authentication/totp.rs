@@ -1,10 +1,11 @@
-/// SEC : Labo 2 - Authentication
-/// Author : Julien Béguin
-/// Date : 23.05.2021
-///
-/// Google authenticator interaction
+//! SEC : Labo project - Authentication
+//! Author : Julien Béguin & Gil Balsiger
+//! Date : 26.06.2021
+//!
+//! Authentication
 
 use google_authenticator::{ErrorCorrectionLevel, GA_AUTH};
+use qr_code::QrCode;
 
 /// Generate a new 32-char long secret
 ///
@@ -19,8 +20,15 @@ pub fn generate_secret() -> String {
 ///             is transferred in plaintext in the URL (can be intercepted). Use with caution.
 ///
 /// Return URL String
-pub fn qr_code_url_from_secret(secret: &str, email: Option<&str>) -> String {
-    google_authenticator::qr_code_url!(secret, email.unwrap_or("unnamed account"), "SEC Labo 2", 0, 0, ErrorCorrectionLevel::Medium)
+pub fn qr_code_url_from_secret(secret: &str, email: &str) -> String {
+    google_authenticator::qr_code_url!(
+        secret,
+        email,
+        "SEC Labo 2",
+        0,
+        0,
+        ErrorCorrectionLevel::Medium
+    )
 }
 
 /// Verify user's code from his authenticator using the shared secret
@@ -30,6 +38,16 @@ pub fn verify_code(secret: &str, code: &str) -> bool {
     google_authenticator::verify_code!(secret, code)
 }
 
+pub fn display_totp(email: &str, secret: &str) {
+    let qr_code = QrCode::new(format!(
+        "otpauth://totp/{}?secret={}&issuer=SEC Password manager",
+        email, secret
+    ))
+    .unwrap();
+
+    println!("{}", qr_code.to_string(false, 3));
+    println!("{}", qr_code_url_from_secret(secret, email));
+}
 
 #[cfg(test)]
 mod tests {
@@ -52,17 +70,9 @@ mod tests {
     }
 
     #[test]
-    fn test_qr_code_url_from_secret_without_email() {
-        let secret = generate_secret();
-        let url = qr_code_url_from_secret(secret.as_str(), None);
-
-        assert!(url.contains(&secret));
-    }
-
-    #[test]
     fn test_qr_code_url_from_secret_with_email() {
         let secret = generate_secret();
-        let url = qr_code_url_from_secret(secret.as_str(), Some("julien@heig-vd.ch"));
+        let url = qr_code_url_from_secret(secret.as_str(), "julien@heig-vd.ch");
 
         assert!(url.contains(&secret));
         assert!(url.contains("julien"));

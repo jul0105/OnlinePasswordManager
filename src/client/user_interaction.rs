@@ -2,22 +2,18 @@
 
 use crate::client::action::Session;
 use crate::common::error_message::ErrorMessage;
-use console::Emoji;
 use console::style;
+use console::Emoji;
 use dialoguer::console::Term;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Input;
 use dialoguer::Password;
 use dialoguer::Select;
-use regex::Regex;
 use strum::EnumMessage;
 use strum::IntoEnumIterator;
 
 use super::action::Action;
-
-lazy_static! {
-    static ref EMAIL_REGEX: Regex = Regex::new(r#"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])"#).unwrap();
-}
+use crate::server::authentication::email::validate_email;
 
 pub fn start_client() {
     println!("Welcome to password manager\n");
@@ -35,11 +31,11 @@ pub fn start_client() {
     }
 }
 
-pub fn ask_username() -> String {
+pub fn ask_email() -> String {
     Input::<String>::with_theme(&ColorfulTheme::default())
         .with_prompt("Email")
         .validate_with(|val: &String| {
-            if check_email(val) {
+            if validate_email(val) {
                 return Ok(());
             } else {
                 return Err("Please enter a valid email address");
@@ -47,10 +43,6 @@ pub fn ask_username() -> String {
         })
         .interact_text()
         .unwrap()
-}
-
-fn check_email(input: &str) -> bool {
-    EMAIL_REGEX.is_match(input)
 }
 
 pub fn ask_password() -> String {
@@ -63,14 +55,14 @@ pub fn ask_password() -> String {
 
 pub fn ask_totp_code() -> String {
     Input::<String>::with_theme(&ColorfulTheme::default())
-        .with_prompt("2FA code")
+        .with_prompt("Enter 6 digits code")
         .interact_text()
         .unwrap()
 }
 
 pub fn ask_login() -> Session {
     loop {
-        let username = ask_username();
+        let username = ask_email();
         let password = ask_password();
 
         // First try with no totp code
@@ -85,7 +77,7 @@ pub fn ask_login() -> Session {
                         Err(e) => display_error(e),
                     }
                 },
-                e => display_error(e)
+                e => display_error(e),
             },
         }
     }
@@ -130,7 +122,11 @@ fn delete_password(session: &Session) {
 
 fn display_error(e: ErrorMessage) {
     if e.get_message().is_some() {
-        let msg = format!("{} {}. Please try again", Emoji("✘", ""), e.get_message().unwrap());
+        let msg = format!(
+            "{} {}. Please try again",
+            Emoji("✘", ""),
+            e.get_message().unwrap()
+        );
         println!("{}", style(&msg).red());
     }
 }

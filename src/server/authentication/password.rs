@@ -1,13 +1,14 @@
+//! Author : Julien Béguin & Gil Balsiger
+//! Date : 26.06.2021
+//!
+//! Password verification
+
 use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
 use log::debug;
 use rand_core::OsRng;
-
-const MAX_PASSWORD_CHAR: usize = 64; // Included
-const MIN_PASSWORD_CHAR: usize = 8; // Included
-const MIN_PASSWORD_SCORE: u8 = 3;
 
 lazy_static::lazy_static! {
     // Argon2 with default params (Argon2id v19)

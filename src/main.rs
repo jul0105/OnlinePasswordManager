@@ -1,9 +1,10 @@
 //! Online password manager cli
 
-use crate::client::user_interaction::start_client;
+use crate::client::user_interaction::{ask_totp_code, start_client};
+use crate::server::authentication::totp::{display_totp, generate_secret, verify_code};
 use crate::server::repository::DatabaseConnection;
-use client::user_interaction::{ask_password, ask_username};
-use common::{hash::compute_password_hash, totp::new_totp_secret};
+use client::user_interaction::{ask_email, ask_password};
+use common::hash::compute_password_hash;
 use console::style;
 use dialoguer::{theme::ColorfulTheme, Confirm};
 use dotenv::dotenv;
@@ -47,7 +48,7 @@ fn main() {
     .unwrap();
 
     if opts.add_user {
-        let email = ask_username();
+        let email = ask_email();
         let password = ask_password();
         let totp_secret = if Confirm::with_theme(&ColorfulTheme::default())
             .with_prompt("Enable 2FA?")
@@ -56,7 +57,16 @@ fn main() {
             .interact()
             .unwrap()
         {
-            Some(new_totp_secret(&email))
+            // let secret = generate_secret();
+            let secret = "abcdabcdabcdabcd";
+            Some(loop {
+                display_totp(&email, &secret);
+                let code = ask_totp_code();
+                if verify_code(&secret, &code) {
+                    break code;
+                }
+                println!("Invalid code. Please try again");
+            })
         } else {
             None
         };
