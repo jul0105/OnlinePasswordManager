@@ -808,7 +808,6 @@ dependencies = [
  "sodiumoxide",
  "structopt",
  "strum",
- "tempfile",
  "zxcvbn",
 ]
 

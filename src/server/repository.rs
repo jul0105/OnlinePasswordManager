@@ -5,8 +5,6 @@ use super::schema::*;
 use crate::common::error_message::ErrorMessage;
 use crate::server::authentication::password::hash;
 use crate::server::authentication::token::validate_token;
-use crate::server::repository::tokens::dsl::tokens;
-use crate::server::schema::tokens::dsl::user_id;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
 use diesel::{insert_into, Connection, QueryResult, SqliteConnection};
@@ -21,7 +19,6 @@ impl DatabaseConnection {
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
         let conn =
             SqliteConnection::establish(&database_url).expect("Impossible to connect to database");
-
         DatabaseConnection { conn }
     }
 
@@ -81,57 +78,38 @@ pub mod tests {
     use super::*;
     use crate::server::authentication::token;
     use diesel::{Connection, SqliteConnection};
-    use std::env;
-    use tempfile::TempDir;
+    use std::sync::Mutex;
 
-    // This macro from `diesel_migrations` defines an `embedded_migrations` module
-    // containing a function named `run`. This allows the example to be run and
-    // tested without any outside setup of the database.
-    embed_migrations!("migrations");
-
-    /// Get a clean db connection to the test-specific DB environment
-    pub fn get_test_db() -> (DatabaseConnection, TempDir) {
-        // Create temporary dir where db will be stored
-        let tmp_dir = tempfile::Builder::new()
-            .prefix(env!("CARGO_PKG_NAME"))
-            .rand_bytes(5)
-            .tempdir()
-            .expect("not possible to create tempfile");
-
-        let db_path = tmp_dir.path().join("test.db");
-        let conn = SqliteConnection::establish(db_path.to_str().unwrap())
-            .expect("Unable to connect to database");
-
-        // Execute migration to have a clean db
-        embedded_migrations::run(&conn).expect("Migration not possible to run");
-
-        // Override environment variable
-        env::set_var("DATABASE_URL", db_path);
-
-        // Return db and tempdir because the temp directory is deleted when this var is out of scope, making the db unusable.
-        (DatabaseConnection { conn }, tmp_dir)
+    lazy_static! {
+        pub static ref DATABASE: Mutex<DatabaseConnection> = {
+            embed_migrations!("migrations");
+            let conn =
+                SqliteConnection::establish(":memory:").expect("Unable to connect to database");
+            embedded_migrations::run(&conn).expect("Cannot run migrations");
+            Mutex::new(DatabaseConnection { conn })
+        };
     }
 
     #[test]
-    fn test() {
-        let (db, _) = get_test_db();
-
-        assert!(db
-            .add_user("julien@heig-vd.com", "password hash", None)
-            .is_ok());
-        assert!(db.get_user("julien@heig-vd.com").is_ok());
+    fn test_add_user() {
+        let result = DATABASE
+            .lock()
+            .unwrap()
+            .add_user("julien@heig-vd.com", "password hash", None);
+        assert!(result.is_ok(), "{:?}", result);
     }
 
     #[test]
     fn test_add_token() {
-        let (db, _) = get_test_db();
+        let db = DATABASE.lock().unwrap();
 
-        let id_user = 0;
-        let token = token::generate_token(id_user);
-
+        db.add_user("gil@heig-vd.ch", "some password", None)
+            .unwrap();
+        let user_id = db.get_user("gil@heig-vd.ch").unwrap().id;
+        let token = token::generate_token(user_id);
         db.add_token(&token);
         let user = db.get_user_from_token(&token.token);
-        assert!(user.is_ok());
-        assert_eq!(id_user, user.unwrap().id);
+        assert!(user.is_ok(), "{:?}", user);
+        assert_eq!(user_id, user.unwrap().id);
     }
 }

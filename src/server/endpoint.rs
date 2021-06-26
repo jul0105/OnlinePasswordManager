@@ -17,18 +17,14 @@ use crate::common::protected_registry::ProtectedRegistry;
 
 use super::repository::DatabaseConnection;
 
-/// Authenticate user to the server and generate session token
-///
-/// Return session token if successful authentication, Error message otherwise
-pub fn authentication(
+fn authenticate(
+    db: &DatabaseConnection,
     email: &str,
     password: &str,
     totp_code: Option<&str>,
 ) -> Result<String, ErrorMessage> {
     // The entire authentication process is executed, even if invalid, to try to mitigate timing attack
     let mut result = Ok(String::from(""));
-
-    let db = DatabaseConnection::new();
 
     // Get user from DB
     let user = match db.get_user(email) {
@@ -80,6 +76,17 @@ pub fn authentication(
     }
 }
 
+/// Authenticate user to the server and generate session token
+///
+/// Return session token if successful authentication, Error message otherwise
+pub fn authentication(
+    email: &str,
+    password: &str,
+    totp_code: Option<&str>,
+) -> Result<String, ErrorMessage> {
+    authenticate(&DatabaseConnection::new(), email, password, totp_code)
+}
+
 /// Download user's encrypted password file
 ///
 /// Return encrypted file if session token is valid and user has permission to read the file. ErrorMessage otherwise
@@ -118,9 +125,9 @@ pub fn upload(session_token: &str, file_content: ProtectedRegistry) -> Result<()
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
-    use crate::server::repository::tests::get_test_db;
+    use crate::server::repository::tests::DATABASE;
     use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 
     pub fn init_logger() {
@@ -132,22 +139,19 @@ mod tests {
         )
         .unwrap();
     }
+
     #[test]
     fn test_authentication() {
-        init_logger();
-        let (db, td) = get_test_db();
+        let db = DATABASE.lock().unwrap();
 
-        let qres = db.add_user(
-            "julien@heig-vd.ch",
-            password::hash("123456789").as_str(),
-            None,
-        );
+        let qres = db.add_user("albert@heig-vd.ch", "123456789", None);
         assert!(qres.is_ok());
-        assert!(db.get_user("julien@heig-vd.ch").is_ok());
+        assert!(db.get_user("albert@heig-vd.ch").is_ok());
 
-        assert!(authentication("julien@heig-vd.ch", "123456789", None).is_ok());
+        let auth = authenticate(&db, "albert@heig-vd.ch", "123456789", None);
+        assert!(auth.is_ok(), "{:?}", auth);
 
-        assert!(authentication("julien@he.ch", "123456789", None).is_err());
-        assert!(authentication("julien@heig-vd.ch", "1234", None).is_err());
+        assert!(authenticate(&db, "albert@he.ch", "123456789", None).is_err());
+        assert!(authenticate(&db, "albert@heig-vd.ch", "1234", None).is_err());
     }
 }
