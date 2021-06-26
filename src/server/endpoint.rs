@@ -16,44 +16,47 @@ use crate::server::repository::DatabaseConnection;
 /// Return session token if successful authentication, Error message otherwise
 pub fn authentication(email: &str, password: &str, totp_code: Option<&str>) -> Result<String, ErrorMessage> {
     // The entire authentication process is executed, even if invalid, to try to mitigate timing attack
-    let mut is_valid = true;
+    let mut result = Ok(String::from(""));
 
     let db = DatabaseConnection::new();
 
-    // Hash password
-    let hashed_password = password::store(password.as_bytes());
-
-    // Check if the email, password pair exist in DB
-    let totp_secret = match db.auth_user(email, hashed_password.as_str()) {
-        Ok(user) => user.totp_secret,
+    // Get user from DB
+    let user = match db.get_user(email) {
+        Ok(user) => user,
         Err(_) => {
-            is_valid = false;
-            warn!("User {} failed to authenticate with the server. The provided email-password combination is not present in DB.", email);
-            None
+            result = Err(ErrorMessage::AuthFailed);
+            User {
+                id: 0,
+                email: "".to_string(),
+                password_hash: "".to_string(),
+                role: "".to_string(),
+                totp_secret: None
+            }
         }
     };
 
+    // Hash password
+    if !password::verify(user.password_hash.as_str(), password.as_bytes()) {
+        result = Err(ErrorMessage::AuthFailed);
+        warn!("User {} failed to authenticate with the server. The provided email-password combination is not present in DB.", email);
+    }
+
     // Check if the totp code match the user in DB
-    match totp_secret {
+    match user.totp_secret {
         None => {} // Normal behavior. User opted out of 2FA
         Some(secret) => match totp_code {
             None => {
-                is_valid = false;
+                result = Err(ErrorMessage::AuthFailed);
                 warn!("User {} didn't provide a required TOTP code during authentication with the server", email);
             }
             Some(code) => if !authenticator::verify_code(secret.as_str(), code) {
-                is_valid = false;
+                result = Err(ErrorMessage::AuthFailed);
                 warn!("User {} provided an invalid TOTP code during authentication with the server", email);
             }
         }
     }
 
-    if is_valid {
-        let user = match db.get_user(email) {
-            Ok(user) => user,
-            Err(_) => return Err(ErrorMessage::ServerSideError)
-        };
-
+    if result.is_ok() {
         // If yes, generate and return a session token
         let token = token::generate_token(user.id);
 
@@ -64,7 +67,7 @@ pub fn authentication(email: &str, password: &str, totp_code: Option<&str>) -> R
         Ok(token.token)
     } else {
         // If no, return a generic error message
-        Err(ErrorMessage::AuthFailed)
+        result
     }
 }
 
@@ -104,14 +107,9 @@ mod tests {
         let qres = db.add_user("julien@heig-vd.ch", password::store("123456789".as_bytes()).as_str(), None);
         assert!(qres.is_ok());
         assert!(db.get_user("julien@heig-vd.ch").is_ok());
-        // TODO tests
 
         let result = authentication("julien@heig-vd.ch", "123456789", None);
 
-        // assert!(result.is_ok())
-        match result {
-            Ok(r) => println!("{}", r),
-            Err(e) => println!("{:?}", e),
-        }
+        assert!(result.is_ok());
     }
 }
