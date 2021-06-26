@@ -28,8 +28,8 @@ pub fn authentication(email: &str, password: &str, totp_code: Option<&str>) -> R
             User {
                 id: 0,
                 email: "".to_string(),
-                password_hash: "".to_string(),
-                role: "".to_string(),
+                password_hash: "$argon2id$v=19$m=4096,t=3,p=1$A2ubGqu7J0TSzFEGvSgw8w$OKgETmokunLelwSj11SvKuz/dpI1qNnKvcRI8QNM8uo".to_string(),
+                role: "user".to_string(),
                 totp_secret: None
             }
         }
@@ -108,8 +108,9 @@ mod tests {
         assert!(qres.is_ok());
         assert!(db.get_user("julien@heig-vd.ch").is_ok());
 
-        let result = authentication("julien@heig-vd.ch", "123456789", None);
+        assert!(authentication("julien@heig-vd.ch", "123456789", None).is_ok());
 
-        assert!(result.is_ok());
+        assert!(authentication("julien@he.ch", "123456789", None).is_err());
+        assert!(authentication("julien@heig-vd.ch", "1234", None).is_err());
     }
 }
