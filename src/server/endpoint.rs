@@ -86,6 +86,7 @@ mod tests {
     use diesel::{SqliteConnection, Connection};
     use std::env;
     use dotenv::dotenv;
+    use tempfile::TempDir;
 
 
     // This macro from `diesel_migrations` defines an `embedded_migrations` module
@@ -95,25 +96,31 @@ mod tests {
 
 
     /// Get a clean db connection to the test-specific DB environment
-    fn get_test_db() -> DatabaseConnection {
-        // Retrieve .env config
-        dotenv().ok();
-        // Get connection from the test sqlite db
-        let database_url = env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be set");
-        let conn = SqliteConnection::establish(&database_url).expect("Impossible to connect to database");
+    fn get_test_db() -> (DatabaseConnection, TempDir) {
+        // Create temporary dir where db will be stored
+        let tmp_dir = tempfile::Builder::new()
+            .prefix(env!("CARGO_PKG_NAME"))
+            .rand_bytes(5)
+            .tempdir()
+            .expect("not possible to create tempfile");
+
+        let db_path = tmp_dir.path().join("test.db");
+        let conn = SqliteConnection::establish(db_path.to_str().unwrap()).expect("Unable to connect to database");
 
         // Execute migration to have a clean db
         embedded_migrations::run(&conn).expect("Migration not possible to run");
 
-        DatabaseConnection {
+        // Return db and tempdir because the temp directory is deleted when this var is out of scope, making the db unusable.
+        (DatabaseConnection {
             conn,
-        }
+        }, tmp_dir)
     }
 
     #[test]
     fn test() {
-        let db = get_test_db();
+        let (db, td) = get_test_db();
 
-        db.get_user("dwa");
+        assert!(db.add_user("julien@heig-vd.com", "password hash", None).is_ok());
+        assert!(db.get_user("julien@heig-vd.com").is_ok());
     }
 }
