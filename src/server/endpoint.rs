@@ -3,18 +3,22 @@
 use crate::common::encrypted_file::EncryptedFile;
 use crate::common::error_message::ErrorMessage;
 
-use crate::server::authentication::{password, authenticator, token};
-use crate::server::repository;
+use crate::server::authentication::{authenticator, password, token};
 use crate::server::models::User;
+use crate::server::repository;
 use diesel::result::Error;
 
-use log::{error, warn, info};
 use crate::server::repository::DatabaseConnection;
+use log::{error, info, warn};
 
 /// Authenticate user to the server and generate session token
 ///
 /// Return session token if successful authentication, Error message otherwise
-pub fn authentication(email: &str, password: &str, totp_code: Option<&str>) -> Result<String, ErrorMessage> {
+pub fn authentication(
+    email: &str,
+    password: &str,
+    totp_code: Option<&str>,
+) -> Result<String, ErrorMessage> {
     // The entire authentication process is executed, even if invalid, to try to mitigate timing attack
     let mut result = Ok(String::from(""));
 
@@ -24,21 +28,18 @@ pub fn authentication(email: &str, password: &str, totp_code: Option<&str>) -> R
     let user = match db.get_user(email) {
         Ok(user) => user,
         Err(_) => {
-            result = Err(ErrorMessage::AuthFailed);
-            User {
-                id: 0,
-                email: "".to_string(),
-                password_hash: "$argon2id$v=19$m=4096,t=3,p=1$A2ubGqu7J0TSzFEGvSgw8w$OKgETmokunLelwSj11SvKuz/dpI1qNnKvcRI8QNM8uo".to_string(),
-                role: "user".to_string(),
-                totp_secret: None
-            }
+            warn!("User {} failed to authenticate with the server. The provided email-password combination is not present in DB.", email);
+            return Err(ErrorMessage::AuthFailed);
         }
     };
 
     // Hash password
-    if !password::verify(user.password_hash.as_str(), password.as_bytes()) {
-        result = Err(ErrorMessage::AuthFailed);
-        warn!("User {} failed to authenticate with the server. The provided email-password combination is not present in DB.", email);
+    if !password::verify(&user.password_hash, password) {
+        warn!(
+            "User {} failed to authenticate with the server. Incorrect password",
+            email
+        );
+        return Err(ErrorMessage::AuthFailed);
     }
 
     // Check if the totp code match the user in DB
@@ -49,11 +50,13 @@ pub fn authentication(email: &str, password: &str, totp_code: Option<&str>) -> R
                 result = Err(ErrorMessage::AuthFailed);
                 warn!("User {} didn't provide a required TOTP code during authentication with the server", email);
             }
-            Some(code) => if !authenticator::verify_code(secret.as_str(), code) {
-                result = Err(ErrorMessage::AuthFailed);
-                warn!("User {} provided an invalid TOTP code during authentication with the server", email);
+            Some(code) => {
+                if !authenticator::verify_code(secret.as_str(), code) {
+                    result = Err(ErrorMessage::AuthFailed);
+                    warn!("User {} provided an invalid TOTP code during authentication with the server", email);
+                }
             }
-        }
+        },
     }
 
     if result.is_ok() {
@@ -89,7 +92,7 @@ pub fn upload(session_token: &str, file_content: EncryptedFile) -> Result<(), Er
 mod tests {
     use super::*;
     use crate::server::repository::tests::get_test_db;
-    use simplelog::{TermLogger, LevelFilter, Config, TerminalMode, ColorChoice};
+    use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 
     pub fn init_logger() {
         TermLogger::init(
@@ -97,14 +100,19 @@ mod tests {
             Config::default(),
             TerminalMode::Stdout,
             ColorChoice::Auto,
-        ).unwrap();
+        )
+        .unwrap();
     }
     #[test]
     fn test_authentication() {
         init_logger();
         let (db, td) = get_test_db();
 
-        let qres = db.add_user("julien@heig-vd.ch", password::store("123456789".as_bytes()).as_str(), None);
+        let qres = db.add_user(
+            "julien@heig-vd.ch",
+            password::hash("123456789").as_str(),
+            None,
+        );
         assert!(qres.is_ok());
         assert!(db.get_user("julien@heig-vd.ch").is_ok());
 

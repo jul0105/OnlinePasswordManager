@@ -7,34 +7,38 @@ use chrono::Duration;
 use chrono::Utc;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
-use diesel::{Connection, QueryResult, SqliteConnection, insert_into};
-use rand::RngCore;
+use diesel::{insert_into, Connection, QueryResult, SqliteConnection};
 use rand::rngs::OsRng;
+use rand::RngCore;
 
 use super::models::*;
 use super::schema::*;
+use crate::server::authentication::password::hash;
 use crate::server::repository::tokens::dsl::tokens;
 use crate::server::schema::tokens::dsl::user_id;
 
-
 pub struct DatabaseConnection {
-    pub conn: SqliteConnection
+    pub conn: SqliteConnection,
 }
 
 impl DatabaseConnection {
     pub fn new() -> DatabaseConnection {
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-        let conn = SqliteConnection::establish(&database_url).expect("Impossible to connect to database");
+        let conn =
+            SqliteConnection::establish(&database_url).expect("Impossible to connect to database");
 
-        DatabaseConnection {
-            conn,
-        }
+        DatabaseConnection { conn }
     }
 
-    pub fn add_user(&self, email: &str, password_hash: &str, totp_secret: Option<&str>) -> QueryResult<usize> {
+    pub fn add_user(
+        &self,
+        email: &str,
+        password: &str,
+        totp_secret: Option<&str>,
+    ) -> QueryResult<usize> {
         let new_user = NewUser {
             email,
-            password_hash,
+            password_hash: &hash(password),
             totp_secret,
         };
         insert_into(users::table)
@@ -51,7 +55,9 @@ impl DatabaseConnection {
     pub fn auth_user(&self, user_email: &str, hashed_password: &str) -> QueryResult<User> {
         use super::schema::users::dsl::*;
 
-        users.filter(email.eq(user_email).and(password_hash.eq(hashed_password))).first::<User>(&self.conn)
+        users
+            .filter(email.eq(user_email).and(password_hash.eq(hashed_password)))
+            .first::<User>(&self.conn)
     }
 
     pub fn add_token(&self, new_token: &Token) {
@@ -71,20 +77,18 @@ impl DatabaseConnection {
     }
 }
 
-
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use diesel::{SqliteConnection, Connection};
-    use tempfile::TempDir;
     use crate::server::authentication::token;
+    use diesel::{Connection, SqliteConnection};
     use std::env;
+    use tempfile::TempDir;
 
     // This macro from `diesel_migrations` defines an `embedded_migrations` module
     // containing a function named `run`. This allows the example to be run and
     // tested without any outside setup of the database.
     embed_migrations!("migrations");
-
 
     /// Get a clean db connection to the test-specific DB environment
     pub fn get_test_db() -> (DatabaseConnection, TempDir) {
@@ -96,7 +100,8 @@ pub mod tests {
             .expect("not possible to create tempfile");
 
         let db_path = tmp_dir.path().join("test.db");
-        let conn = SqliteConnection::establish(db_path.to_str().unwrap()).expect("Unable to connect to database");
+        let conn = SqliteConnection::establish(db_path.to_str().unwrap())
+            .expect("Unable to connect to database");
 
         // Execute migration to have a clean db
         embedded_migrations::run(&conn).expect("Migration not possible to run");
@@ -105,16 +110,16 @@ pub mod tests {
         env::set_var("DATABASE_URL", db_path);
 
         // Return db and tempdir because the temp directory is deleted when this var is out of scope, making the db unusable.
-        (DatabaseConnection {
-            conn,
-        }, tmp_dir)
+        (DatabaseConnection { conn }, tmp_dir)
     }
 
     #[test]
     fn test() {
         let (db, td) = get_test_db();
 
-        assert!(db.add_user("julien@heig-vd.com", "password hash", None).is_ok());
+        assert!(db
+            .add_user("julien@heig-vd.com", "password hash", None)
+            .is_ok());
         assert!(db.get_user("julien@heig-vd.com").is_ok());
     }
 
@@ -129,7 +134,6 @@ pub mod tests {
         let token_bis = db.get_user_tokens(id_user);
         assert!(token_bis.is_ok());
         assert_eq!(token, token_bis.unwrap()[0]);
-
 
         let token2 = token::generate_token(id_user);
 

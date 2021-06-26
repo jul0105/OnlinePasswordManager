@@ -1,15 +1,15 @@
 //! Online password manager cli
 
 use crate::client::user_interaction::start_client;
+use crate::server::repository::DatabaseConnection;
 use client::user_interaction::{ask_password, ask_username};
 use common::{hash::compute_password_hash, totp::new_totp_secret};
 use console::style;
-use dialoguer::{Confirm, theme::ColorfulTheme};
+use dialoguer::{theme::ColorfulTheme, Confirm};
 use dotenv::dotenv;
 use log::LevelFilter;
 use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
 use structopt::StructOpt;
-use crate::server::repository::DatabaseConnection;
 
 #[macro_use]
 extern crate diesel;
@@ -39,7 +39,7 @@ fn main() {
     dotenv().ok();
 
     TermLogger::init(
-        LevelFilter::Info,
+        LevelFilter::Debug,
         Config::default(),
         TerminalMode::Stderr,
         ColorChoice::Auto,
@@ -68,7 +68,10 @@ fn main() {
             totp_secret.as_deref(),
         ) {
             Ok(_) => println!("{}", style("User successfully added").green()),
-            Err(_) => println!("{}", style("Error while adding the user. Please try again").red()),
+            Err(_) => println!(
+                "{}",
+                style("Error while adding the user. Please try again").red()
+            ),
         }
     } else {
         start_client();

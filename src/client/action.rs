@@ -1,11 +1,11 @@
 //! Client facade
 
 use sodiumoxide::crypto::secretbox::Key;
-use strum::{EnumIter, EnumString, Display};
+use strum::{Display, EnumIter, EnumString};
 
+use crate::client::password::{Password, PasswordIdentification};
 use crate::common::encrypted_file::EncryptedFile;
 use crate::common::error_message::ErrorMessage;
-use crate::client::password::{PasswordIdentification, Password};
 use crate::common::hash::compute_password_hash;
 use crate::server::endpoint::authentication;
 use crate::server::endpoint::download;
@@ -33,9 +33,13 @@ impl Session {
     /// Derive encryption key from password
     ///
     /// Return Session if successful authentication. ErrorMessage otherwise
-    pub fn login(email: &str, password: &str, totp_code: Option<&str>) -> Result<Session, ErrorMessage> {
+    pub fn login(
+        email: &str,
+        password: &str,
+        totp_code: Option<&str>,
+    ) -> Result<Session, ErrorMessage> {
         let auth = compute_password_hash(email, password); // TODO modify this function
-        let session_token = authentication(email, password, totp_code)?;
+        let session_token = authentication(email, &auth.master_password_hash, totp_code)?;
         let encrypted_file = download(&session_token)?;
         Ok(Session {
             session_token,
@@ -60,7 +64,12 @@ impl Session {
     /// Encrypt password file and upload it to the server.
     ///
     /// Return ErrorMessage if the password cannot be added. Ok(()) otherwise
-    pub fn add_password(&self, label: &str, username: &str, password: &str) -> Result<(), ErrorMessage> {
+    pub fn add_password(
+        &self,
+        label: &str,
+        username: &str,
+        password: &str,
+    ) -> Result<(), ErrorMessage> {
         todo!();
     }
 
@@ -68,7 +77,13 @@ impl Session {
     /// Encrypt password file and upload it to the server.
     ///
     /// Return ErrorMessage if the password cannot be modified. Ok(()) otherwise
-    pub fn modify_password(&self, password_id: u32, label: &str, username: &str, password: &str) -> Result<(), ErrorMessage> {
+    pub fn modify_password(
+        &self,
+        password_id: u32,
+        label: &str,
+        username: &str,
+        password: &str,
+    ) -> Result<(), ErrorMessage> {
         todo!();
     }
 
