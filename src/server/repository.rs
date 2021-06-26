@@ -78,6 +78,7 @@ pub mod tests {
     use diesel::{SqliteConnection, Connection};
     use tempfile::TempDir;
     use crate::server::authentication::token;
+    use std::env;
 
     // This macro from `diesel_migrations` defines an `embedded_migrations` module
     // containing a function named `run`. This allows the example to be run and
@@ -99,6 +100,9 @@ pub mod tests {
 
         // Execute migration to have a clean db
         embedded_migrations::run(&conn).expect("Migration not possible to run");
+
+        // Override environment variable
+        env::set_var("DATABASE_URL", db_path);
 
         // Return db and tempdir because the temp directory is deleted when this var is out of scope, making the db unusable.
         (DatabaseConnection {

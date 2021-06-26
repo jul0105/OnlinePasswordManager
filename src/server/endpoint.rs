@@ -86,9 +86,32 @@ pub fn upload(session_token: &str, file_content: EncryptedFile) -> Result<(), Er
 mod tests {
     use super::*;
     use crate::server::repository::tests::get_test_db;
+    use simplelog::{TermLogger, LevelFilter, Config, TerminalMode, ColorChoice};
 
+    pub fn init_logger() {
+        TermLogger::init(
+            LevelFilter::Trace,
+            Config::default(),
+            TerminalMode::Stdout,
+            ColorChoice::Auto,
+        ).unwrap();
+    }
     #[test]
-    fn test() {
+    fn test_authentication() {
+        init_logger();
         let (db, td) = get_test_db();
+
+        let qres = db.add_user("julien@heig-vd.ch", password::store("123456789".as_bytes()).as_str(), None);
+        assert!(qres.is_ok());
+        assert!(db.get_user("julien@heig-vd.ch").is_ok());
+        // TODO tests
+
+        let result = authentication("julien@heig-vd.ch", "123456789", None);
+
+        // assert!(result.is_ok())
+        match result {
+            Ok(r) => println!("{}", r),
+            Err(e) => println!("{:?}", e),
+        }
     }
 }
