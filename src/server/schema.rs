@@ -1,7 +1,8 @@
 table! {
     tokens (token) {
         token -> Text,
-        expire_at -> Timestamp,
+        validity_start -> Timestamp,
+        validity_end -> Timestamp,
         user_id -> Integer,
     }
 }

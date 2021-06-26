@@ -3,6 +3,7 @@
 use chrono::NaiveDateTime;
 
 use crate::server::schema::*;
+use std::time::SystemTime;
 
 #[derive(Identifiable, Queryable, Debug)]
 #[table_name = "users"]
@@ -22,10 +23,11 @@ pub struct NewUser<'a> {
     pub totp_secret: Option<&'a str>,
 }
 
-#[derive(Queryable, Insertable, Debug)]
+#[derive(Queryable, Insertable, Debug, Clone, PartialEq)]
 #[table_name = "tokens"]
 pub struct Token {
     pub token: String,
-    pub expire_at: NaiveDateTime,
+    pub validity_start: NaiveDateTime,
+    pub validity_end: NaiveDateTime,
     pub user_id: i32,
 }

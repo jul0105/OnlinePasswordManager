@@ -49,14 +49,16 @@ pub fn authentication(email: &str, password: &str, totp_code: Option<&str>) -> R
     }
 
     if is_valid {
+        let user = match db.get_user(email) {
+            Ok(user) => user,
+            Err(_) => return Err(ErrorMessage::ServerSideError)
+        };
+
         // If yes, generate and return a session token
-        let token = token::generate_token();
+        let token = token::generate_token(user.id);
 
         // Store whole token in DB
-        match db.get_user(email) {
-            Ok(user) => db.add_token(&user, &token),
-            Err(_) => return Err(ErrorMessage::ServerSideError)
-        }
+        db.add_token(&token);
 
         info!("User {} successfully authenticated with the server.", email);
         Ok(token.token)
@@ -122,5 +124,25 @@ mod tests {
 
         assert!(db.add_user("julien@heig-vd.com", "password hash", None).is_ok());
         assert!(db.get_user("julien@heig-vd.com").is_ok());
+    }
+
+    #[test]
+    fn test_add_token() {
+        let (db, td) = get_test_db();
+
+        let user_id = 0;
+        let token = token::generate_token(user_id);
+
+        db.add_token(&token);
+        let token2 = db.get_user_tokens(user_id);
+        assert!(token2.is_ok());
+        assert_eq!(token, token2.unwrap());
+
+        // TODO
+        // let token3 = token::generate_token(user_id);
+        //
+        // db.add_token(&token3);
+        // let token4 = db.get_user_tokens(user_id);
+        // println!("{:?}", token4)
     }
 }

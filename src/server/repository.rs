@@ -13,6 +13,9 @@ use rand::rngs::OsRng;
 
 use super::models::*;
 use super::schema::*;
+use crate::server::repository::tokens::dsl::tokens;
+use crate::server::schema::tokens::dsl::user_id;
+
 
 pub struct DatabaseConnection {
     pub conn: SqliteConnection
@@ -51,26 +54,20 @@ impl DatabaseConnection {
         users.filter(email.eq(user_email).and(password_hash.eq(hashed_password))).first::<User>(&self.conn)
     }
 
-    pub fn add_token(&self, user: &User, token: &crate::server::authentication::token::Token) {
-        todo!();
-        self.delete_expired_token(user);
+    pub fn add_token(&self, new_token: &Token) {
+        use super::schema::tokens::dsl::*;
+
+        insert_into(tokens).values(new_token).execute(&self.conn);
+
+        // self.delete_expired_token(user);
+    }
+
+    pub fn get_user_tokens(&self, user: i32) -> QueryResult<Token> {
+        // TODO return more than one token
+        tokens.filter(user_id.eq(user)).first::<Token>(&self.conn)
     }
 
     pub fn delete_expired_token(&self, user: &User) {
         todo!();
-    }
-
-    pub fn new_token(&self, user: &User) -> String {
-        use super::schema::tokens::dsl::*;
-
-        let mut buffer = [0u8; 24];
-        OsRng.fill_bytes(&mut buffer);
-        let result = Token {
-            token: encode(buffer),
-            expire_at: Utc::now().naive_utc() + Duration::hours(1),
-            user_id: user.id
-        };
-        insert_into(tokens).values(&result).execute(&self.conn).unwrap();
-        return result.token;
     }
 }
