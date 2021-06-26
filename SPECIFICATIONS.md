@@ -2,7 +2,7 @@
 
 ## 1. General idea
 
-- Client store encrypted file in the server
+- Client store encrypted file on the server
   - File contains the list of user's password
   - File is encrypted using a key only known by the client (derived from the user's password) (**CIA**)
   - Each user has only one encrypted file on the server, identified by its hashed username
@@ -15,14 +15,12 @@
 - All activities on the server are **logged**
 - Transmission between client and server are made on HTTPS
 
-
-
 Bonus ? :)
 
 - User use 2FA authenticator to generate a Time-based One Time Password (TOTP).
 
 - Trying to mitigate timing attack by making (sort of) time-constant server endpoint
-- Using Diesel for DB management 
+- Using Diesel for DB management
 
 ## 2. Interactions between client and server
 
@@ -41,8 +39,6 @@ note over server: Authenticate user with email, password and TOTP
 note over server: If user is valid, generate session token
 server->client: Return session token
 ```
-
-
 
 ### 2.2. Download file
 
@@ -88,8 +84,6 @@ If user has role admin, he can also :
 
 - Add user
 - Delete user
-
-
 
 ### 3.1. Read password
 
@@ -146,4 +140,3 @@ note over client: Decrypt file, delete password password
 note over client: Encrypt file and upload it to server
 client->user: Confirm
 ```
-

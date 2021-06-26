@@ -22,4 +22,7 @@ pub enum ErrorMessage {
 
     #[strum(message = "Protected registry does not exist")]
     ProtectedRegistryDoesNotExist,
+
+    #[strum(message = "Decryption failed")]
+    PasswordEntryDecryptionFailed,
 }

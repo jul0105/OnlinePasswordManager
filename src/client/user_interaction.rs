@@ -18,12 +18,12 @@ use crate::server::authentication::email::validate_email;
 pub fn start_client() {
     println!("Welcome to password manager\n");
 
-    let session = ask_login();
+    let mut session = ask_login();
     let action = ask_action();
 
     match action {
         Some(a) => {
-            handle_action(&session, a);
+            handle_action(&mut session, a);
         }
         None => {
             println!("No action choosen. Quitting...");
@@ -46,7 +46,7 @@ pub fn ask_email() -> String {
 }
 
 pub fn ask_password() -> String {
-    // TODO Check length
+    // TODO Check password client-side (it's the only way, we cannot send the password to the server)
     Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Password")
         .interact()
@@ -95,7 +95,7 @@ pub fn ask_action() -> Option<Action> {
     selection.map_or(None, |i| Some(actions[i]))
 }
 
-fn handle_action(session: &Session, action: Action) {
+fn handle_action(session: &mut Session, action: Action) {
     match action {
         Action::ReadPassword => read_password(session),
         Action::AddNewPassword => add_new_password(session),
@@ -108,8 +108,37 @@ fn read_password(session: &Session) {
     todo!();
 }
 
-fn add_new_password(session: &Session) {
-    todo!();
+fn ask_label() -> String {
+    Input::<String>::with_theme(&ColorfulTheme::default())
+        .with_prompt("Label")
+        .interact_text()
+        .unwrap()
+}
+
+fn ask_username() -> String {
+    Input::<String>::with_theme(&ColorfulTheme::default())
+        .with_prompt("Username")
+        .interact_text()
+        .unwrap()
+}
+
+fn ask_new_password() -> String {
+    Input::<String>::with_theme(&ColorfulTheme::default())
+        .with_prompt("Password")
+        .interact_text()
+        .unwrap()
+}
+
+fn add_new_password(session: &mut Session) {
+    let label = ask_label();
+    let username = ask_username();
+    let new_password = ask_new_password();
+    match session.add_password(&label, &username, &new_password) {
+        Ok(_) => {
+            println!("Password successfully added!");
+        }
+        Err(e) => display_error(e),
+    }
 }
 
 fn modify_password(session: &Session) {

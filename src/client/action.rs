@@ -1,13 +1,13 @@
 //! Client facade
 
-use sodiumoxide::crypto::secretbox::Key;
+use sodiumoxide::crypto::aead::Key;
 use strum::{Display, EnumIter, EnumString};
 
 use crate::common::error_message::ErrorMessage;
 use crate::common::hash::compute_password_hash;
-use crate::common::protected_registry::ProtectedRegistry;
-use crate::server::endpoint::authentication;
+use crate::common::protected_registry::{PasswordEntry, Registry};
 use crate::server::endpoint::download;
+use crate::server::endpoint::{authentication, upload};
 
 #[derive(Debug, Clone, Copy, Display, EnumIter, EnumString)]
 pub enum Action {
@@ -22,9 +22,9 @@ pub enum Action {
 }
 
 pub struct Session {
-    encryption_key: Key,
+    master_key: Key,
     session_token: String,
-    encrypted_file: ProtectedRegistry,
+    registry: Registry,
 }
 
 impl Session {
@@ -37,13 +37,14 @@ impl Session {
         password: &str,
         totp_code: Option<&str>,
     ) -> Result<Session, ErrorMessage> {
-        let auth = compute_password_hash(email, password); // TODO modify this function
+        let auth = compute_password_hash(email, password);
         let session_token = authentication(email, &auth.master_password_hash, totp_code)?;
-        let encrypted_file = download(&session_token)?;
+        let protected_registry = download(&session_token)?;
+        let registry = protected_registry.decrypt(&auth.master_key)?;
         Ok(Session {
             session_token,
-            encrypted_file,
-            encryption_key: Key::from_slice(&auth.master_key).unwrap(),
+            master_key: auth.master_key,
+            registry,
         })
     }
 
@@ -64,12 +65,19 @@ impl Session {
     ///
     /// Return ErrorMessage if the password cannot be added. Ok(()) otherwise
     pub fn add_password(
-        &self,
+        &mut self,
         label: &str,
         username: &str,
         password: &str,
     ) -> Result<(), ErrorMessage> {
-        todo!();
+        self.registry.entries.push(PasswordEntry {
+            label: label.to_owned(),
+            username: username.to_owned(),
+            password: password.to_owned(),
+        });
+        let protected_registry = self.registry.encrypt(&self.master_key);
+        upload(&self.session_token, protected_registry);
+        Ok(())
     }
 
     /// Modify given password in the password manager.

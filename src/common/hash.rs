@@ -3,12 +3,13 @@
 use argon2::{password_hash::SaltString, Argon2, Params, PasswordHasher};
 use base64::encode;
 use sha3::{Digest, Sha3_256};
+use sodiumoxide::crypto::aead::Key;
 
 #[derive(Debug)]
 pub struct MasterAuth {
     /// Useful key to encrypt or decrypt data  
     /// **Warning**: never transmit it to the server
-    pub master_key: Vec<u8>,
+    pub master_key: Key,
 
     /// Used for authentication to the server
     pub master_password_hash: String,
@@ -45,7 +46,7 @@ pub fn compute_password_hash(email: &str, password: &str) -> MasterAuth {
         .to_string();
 
     MasterAuth {
-        master_key,
+        master_key: Key::from_slice(&master_key).unwrap(),
         master_password_hash,
     }
 }
