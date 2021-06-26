@@ -71,3 +71,69 @@ impl DatabaseConnection {
         todo!();
     }
 }
+
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use diesel::{SqliteConnection, Connection};
+    use tempfile::TempDir;
+    use crate::server::authentication::token;
+
+
+
+    // This macro from `diesel_migrations` defines an `embedded_migrations` module
+    // containing a function named `run`. This allows the example to be run and
+    // tested without any outside setup of the database.
+    embed_migrations!("migrations");
+
+
+    /// Get a clean db connection to the test-specific DB environment
+    pub fn get_test_db() -> (DatabaseConnection, TempDir) {
+        // Create temporary dir where db will be stored
+        let tmp_dir = tempfile::Builder::new()
+            .prefix(env!("CARGO_PKG_NAME"))
+            .rand_bytes(5)
+            .tempdir()
+            .expect("not possible to create tempfile");
+
+        let db_path = tmp_dir.path().join("test.db");
+        let conn = SqliteConnection::establish(db_path.to_str().unwrap()).expect("Unable to connect to database");
+
+        // Execute migration to have a clean db
+        embedded_migrations::run(&conn).expect("Migration not possible to run");
+
+        // Return db and tempdir because the temp directory is deleted when this var is out of scope, making the db unusable.
+        (DatabaseConnection {
+            conn,
+        }, tmp_dir)
+    }
+
+    #[test]
+    fn test() {
+        let (db, td) = get_test_db();
+
+        assert!(db.add_user("julien@heig-vd.com", "password hash", None).is_ok());
+        assert!(db.get_user("julien@heig-vd.com").is_ok());
+    }
+
+    #[test]
+    fn test_add_token() {
+        let (db, td) = get_test_db();
+
+        let id_user = 0;
+        let token = token::generate_token(id_user);
+
+        db.add_token(&token);
+        let token2 = db.get_user_tokens(id_user);
+        assert!(token2.is_ok());
+        assert_eq!(token, token2.unwrap());
+
+        // TODO
+        // let token3 = token::generate_token(user_id);
+        //
+        // db.add_token(&token3);
+        // let token4 = db.get_user_tokens(user_id);
+        // println!("{:?}", token4)
+    }
+}
