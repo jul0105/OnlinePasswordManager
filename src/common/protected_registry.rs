@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 use sodiumoxide::crypto::aead::{gen_nonce, open, seal, Key, Nonce};
 
@@ -67,9 +69,19 @@ impl Registry {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PasswordEntry {
     pub label: String,
     pub username: String,
     pub password: String,
+}
+
+impl Display for PasswordEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Label: {}\nUsername: {}\nPassword: {}",
+            self.label, self.username, self.password
+        )
+    }
 }

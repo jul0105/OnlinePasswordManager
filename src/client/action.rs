@@ -49,15 +49,8 @@ impl Session {
     }
 
     /// Get list of passwords labels
-    pub fn get_labels(&self) -> Result<Vec<String>, ErrorMessage> {
-        todo!();
-    }
-
-    /// Get full password's infos for the given password id
-    ///
-    /// Return Password struct if valid id. ErrorMessage otherwise
-    pub fn read_password(&self, password_id: u32) -> Result<String, ErrorMessage> {
-        todo!();
+    pub fn get_entries(&self) -> Vec<PasswordEntry> {
+        return self.registry.entries.clone();
     }
 
     /// Add a new password to the password manager.

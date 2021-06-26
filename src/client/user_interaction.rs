@@ -19,14 +19,18 @@ pub fn start_client() {
     println!("Welcome to password manager\n");
 
     let mut session = ask_login();
-    let action = ask_action();
 
-    match action {
-        Some(a) => {
-            handle_action(&mut session, a);
-        }
-        None => {
-            println!("No action choosen. Quitting...");
+    loop {
+        let action = ask_action();
+
+        match action {
+            Some(a) => {
+                handle_action(&mut session, a);
+            }
+            None => {
+                println!("No action choosen. Quitting...");
+                return;
+            }
         }
     }
 }
@@ -84,6 +88,7 @@ pub fn ask_login() -> Session {
 }
 
 pub fn ask_action() -> Option<Action> {
+    println!();
     let actions: Vec<Action> = Action::iter().collect();
     let selection = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Choose an action")
@@ -105,7 +110,23 @@ fn handle_action(session: &mut Session, action: Action) {
 }
 
 fn read_password(session: &Session) {
-    todo!();
+    let entries = session.get_entries();
+    let labels = entries
+        .iter()
+        .map(|entry| entry.label.clone())
+        .collect::<Vec<String>>();
+
+    let selection = Select::with_theme(&ColorfulTheme::default())
+        .with_prompt("Choose a label")
+        .paged(true)
+        .items(&labels)
+        .default(0)
+        .interact_on_opt(&Term::stderr())
+        .unwrap();
+
+    if let Some(index) = selection {
+        println!("\n{}", entries[index]);
+    }
 }
 
 fn ask_label() -> String {
@@ -135,7 +156,10 @@ fn add_new_password(session: &mut Session) {
     let new_password = ask_new_password();
     match session.add_password(&label, &username, &new_password) {
         Ok(_) => {
-            println!("Password successfully added!");
+            println!(
+                "{}",
+                style(format!("\n{} Password successfully added", Emoji("✔", ""))).green()
+            );
         }
         Err(e) => display_error(e),
     }
