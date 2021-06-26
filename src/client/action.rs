@@ -76,7 +76,7 @@ impl Session {
             password: password.to_owned(),
         });
         let protected_registry = self.registry.encrypt(&self.master_key);
-        upload(&self.session_token, protected_registry);
+        upload(&self.session_token, protected_registry)?;
         Ok(())
     }
 

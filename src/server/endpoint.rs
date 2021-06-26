@@ -103,13 +103,8 @@ pub fn download(session_token: &str) -> Result<ProtectedRegistry, ErrorMessage> 
             }
             Err(_) => {
                 // Create empty ProjectedRegistry
-                let new_registry_file =
-                    File::create(Path::new("server_data").join(user.id.to_string())).unwrap();
                 let registry = ProtectedRegistry::new();
-                let serialized_registry = bincode::serialize(&registry).unwrap();
-                let mut writer =
-                    DeflateEncoder::new(BufWriter::new(new_registry_file), Compression::default());
-                writer.write_all(&serialized_registry).unwrap();
+                store_protected_registry(user.id, &registry, Path::new("server_data"))?;
                 return Ok(registry);
             }
         },
@@ -120,8 +115,32 @@ pub fn download(session_token: &str) -> Result<ProtectedRegistry, ErrorMessage> 
 /// Upload (Override) user's stored password file with the given encrypted file
 ///
 /// Return Ok if upload successful. ErrorMessage otherwise
-pub fn upload(session_token: &str, file_content: ProtectedRegistry) -> Result<(), ErrorMessage> {
-    todo!();
+pub fn upload(
+    session_token: &str,
+    protected_registry: ProtectedRegistry,
+) -> Result<(), ErrorMessage> {
+    let db = DatabaseConnection::new();
+
+    match db.get_user_from_token(session_token) {
+        Ok(user) => {
+            store_protected_registry(user.id, &protected_registry, Path::new("server_data"))?;
+            Ok(())
+        }
+        Err(e) => Err(e),
+    }
+}
+
+/// Serialize, compress and store the protected registry
+fn store_protected_registry(
+    user_id: i32,
+    registry: &ProtectedRegistry,
+    folder: &Path,
+) -> Result<(), ErrorMessage> {
+    let new_registry_file = File::create(folder.join(user_id.to_string())).unwrap();
+    let serialized_registry = bincode::serialize(&registry).unwrap();
+    let mut writer = DeflateEncoder::new(BufWriter::new(new_registry_file), Compression::default());
+    writer.write_all(&serialized_registry).unwrap();
+    Ok(())
 }
 
 #[cfg(test)]
