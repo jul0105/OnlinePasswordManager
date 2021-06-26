@@ -31,6 +31,10 @@ fn authenticate(
         Ok(user) => user,
         Err(_) => {
             warn!("User {} failed to authenticate with the server. The provided email-password combination is not present in DB.", email);
+
+            // Fake Argon2 for timing attacks
+            password::verify("$argon2id$v=19$m=4096,t=3,p=1$spbfQIc9BCO2mWdMRMp3iQ$+tJffBAuOCQqKbVa9Db2P+zrQd6YbdTzxg41jY20odY", "demo");
+
             return Err(ErrorMessage::AuthFailed);
         }
     };
@@ -49,12 +53,12 @@ fn authenticate(
         None => {} // Normal behavior. User opted out of 2FA
         Some(secret) => match totp_code {
             None => {
-                result = Err(ErrorMessage::AuthFailed);
+                result = Err(ErrorMessage::TotpRequired);
                 warn!("User {} didn't provide a required TOTP code during authentication with the server", email);
             }
             Some(code) => {
-                if !totp::verify_code(secret.as_str(), code) {
-                    result = Err(ErrorMessage::AuthFailed);
+                if !totp::verify_code(&secret, code) {
+                    result = Err(ErrorMessage::InvalidTotpCode);
                     warn!("User {} provided an invalid TOTP code during authentication with the server", email);
                 }
             }
@@ -99,7 +103,10 @@ pub fn download(session_token: &str) -> Result<ProtectedRegistry, ErrorMessage> 
                 let mut buffer = Vec::new();
                 let mut reader = DeflateDecoder::new(BufReader::new(file));
                 reader.read_to_end(&mut buffer).unwrap();
-                return Ok(bincode::deserialize(&buffer).unwrap());
+                match bincode::deserialize(&buffer) {
+                    Ok(data) => Ok(data),
+                    Err(_) => Err(ErrorMessage::DeserializeError),
+                }
             }
             Err(_) => {
                 // Create empty ProjectedRegistry

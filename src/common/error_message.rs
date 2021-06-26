@@ -11,7 +11,7 @@ pub enum ErrorMessage {
     #[strum(message = "Incorrect email or password")]
     AuthFailed,
 
-    #[strum(message = "Sorry, an error happened on our side. Please try again.")]
+    #[strum(message = "Sorry, an error happened on our side")]
     ServerSideError,
 
     #[strum(message = "User not found")]
@@ -20,9 +20,9 @@ pub enum ErrorMessage {
     #[strum(message = "Token no longer valid")]
     TokenExpired,
 
-    #[strum(message = "Protected registry does not exist")]
-    ProtectedRegistryDoesNotExist,
-
     #[strum(message = "Decryption failed")]
-    PasswordEntryDecryptionFailed,
+    DecryptionFailed,
+
+    #[strum(message = "Unable to parse data from server")]
+    DeserializeError,
 }

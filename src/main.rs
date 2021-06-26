@@ -1,5 +1,7 @@
 //! Online password manager cli
 
+use std::fs::create_dir_all;
+
 use crate::client::user_interaction::{ask_totp_code, start_client};
 use crate::server::authentication::totp::{display_totp, verify_code};
 use crate::server::repository::DatabaseConnection;
@@ -47,6 +49,9 @@ fn main() {
     )
     .unwrap();
 
+    // Create server_data dir
+    create_dir_all("server_data").ok();
+
     if opts.add_user {
         let email = ask_email();
         let password = ask_password();
@@ -63,7 +68,7 @@ fn main() {
                 display_totp(&email, &secret);
                 let code = ask_totp_code();
                 if verify_code(&secret, &code) {
-                    break code;
+                    break secret;
                 }
                 println!("Invalid code. Please try again");
             })

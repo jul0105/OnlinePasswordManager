@@ -5,11 +5,9 @@ use sodiumoxide::crypto::aead::{gen_nonce, open, seal, Key, Nonce};
 
 use super::error_message::ErrorMessage;
 
-pub type ProtectedEntry = Vec<u8>;
-
 #[derive(Serialize, Deserialize)]
 pub struct ProtectedRegistry {
-    protected_entries: Vec<ProtectedEntry>,
+    protected_entries: Vec<u8>,
     nonce: Nonce,
 }
 
@@ -21,24 +19,22 @@ impl ProtectedRegistry {
         }
     }
     pub fn decrypt(&self, master_key: &Key) -> Result<Registry, ErrorMessage> {
-        let entries = self
-            .protected_entries
-            .iter()
-            .map(
-                |protected_entry| match open(&protected_entry, None, &self.nonce, master_key) {
-                    Ok(data) => Ok(bincode::deserialize::<PasswordEntry>(&data).unwrap()),
-                    Err(_) => Err(()),
+        if self.protected_entries.len() > 0 {
+            match open(&self.protected_entries, None, &self.nonce, master_key) {
+                Ok(protected_entries) => match bincode::deserialize(&protected_entries) {
+                    Ok(entries) => Ok(Registry {
+                        entries,
+                        nonce: self.nonce,
+                    }),
+                    Err(_) => Err(ErrorMessage::DeserializeError),
                 },
-            )
-            .collect::<Vec<Result<PasswordEntry, ()>>>();
-
-        if entries.iter().any(|entry| entry.is_err()) {
-            return Err(ErrorMessage::PasswordEntryDecryptionFailed);
+                Err(_) => Err(ErrorMessage::DecryptionFailed),
+            }
         } else {
-            return Ok(Registry {
-                entries: entries.into_iter().map(|entry| entry.unwrap()).collect(),
+            Ok(Registry {
                 nonce: self.nonce,
-            });
+                entries: Vec::new(),
+            })
         }
     }
 }
@@ -50,22 +46,15 @@ pub struct Registry {
 
 impl Registry {
     pub fn encrypt(&self, master_key: &Key) -> ProtectedRegistry {
-        let protected_entries = self
-            .entries
-            .iter()
-            .map(|entry| {
-                return seal(
-                    &bincode::serialize(entry).unwrap(),
-                    None,
-                    &self.nonce,
-                    master_key,
-                );
-            })
-            .collect::<Vec<ProtectedEntry>>();
-        return ProtectedRegistry {
+        ProtectedRegistry {
             nonce: self.nonce,
-            protected_entries,
-        };
+            protected_entries: seal(
+                &bincode::serialize(&self.entries).unwrap(),
+                None,
+                &self.nonce,
+                master_key,
+            ),
+        }
     }
 }
 

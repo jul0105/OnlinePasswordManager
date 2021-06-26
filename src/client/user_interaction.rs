@@ -117,6 +117,11 @@ fn select_password_entry(registry: &Registry) -> Option<usize> {
         .map(|entry| entry.label.clone())
         .collect::<Vec<String>>();
 
+    if labels.len() == 0 {
+        println!("Your vault is currently empty. Add a password first.");
+        return None;
+    }
+
     Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Choose a label")
         .paged(true)

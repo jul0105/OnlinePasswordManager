@@ -88,7 +88,6 @@ pub fn hash(password: &str) -> String {
 ///
 /// Return true if password match, false otherwise
 pub fn verify(hash: &str, password: &str) -> bool {
-    debug!("Checking hash {} with password {}", hash, password);
     ARGON2
         .verify_password(password.as_bytes(), &PasswordHash::new(&hash).unwrap())
         .is_ok()
