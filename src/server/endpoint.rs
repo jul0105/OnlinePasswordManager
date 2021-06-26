@@ -4,12 +4,16 @@ use crate::common::error_message::ErrorMessage;
 
 use crate::server::authentication::{password, token, totp};
 
+use base64::read;
+use flate2::read::DeflateDecoder;
+use flate2::write::DeflateEncoder;
+use flate2::Compression;
 use log::{info, warn};
 use std::fs::File;
-use std::io::Read;
+use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
-use crate::common::encrypted_file::ProtectedRegistry;
+use crate::common::protected_registry::ProtectedRegistry;
 
 use super::repository::DatabaseConnection;
 
@@ -84,12 +88,23 @@ pub fn download(session_token: &str) -> Result<ProtectedRegistry, ErrorMessage> 
 
     match db.get_user_from_token(session_token) {
         Ok(user) => match File::open(Path::new("server_data").join(user.id.to_string())) {
-            Ok(mut file) => {
+            Ok(file) => {
                 let mut buffer = Vec::new();
-                file.read_to_end(&mut buffer).unwrap();
-                return Ok(ProtectedRegistry::new(buffer));
+                let mut reader = DeflateDecoder::new(BufReader::new(file));
+                reader.read_to_end(&mut buffer).unwrap();
+                return Ok(bincode::deserialize(&buffer).unwrap());
             }
-            Err(_) => return Err(ErrorMessage::ProtectedRegistryDoesNotExist),
+            Err(_) => {
+                // Create empty ProjectedRegistry
+                let new_registry_file =
+                    File::create(Path::new("server_data").join(user.id.to_string())).unwrap();
+                let registry = ProtectedRegistry::new();
+                let serialized_registry = bincode::serialize(&registry).unwrap();
+                let mut writer =
+                    DeflateEncoder::new(BufWriter::new(new_registry_file), Compression::default());
+                writer.write_all(&serialized_registry).unwrap();
+                return Ok(registry);
+            }
         },
         Err(error) => return Err(error),
     }

@@ -3,9 +3,9 @@
 use sodiumoxide::crypto::secretbox::Key;
 use strum::{Display, EnumIter, EnumString};
 
-use crate::common::encrypted_file::ProtectedRegistry;
 use crate::common::error_message::ErrorMessage;
 use crate::common::hash::compute_password_hash;
+use crate::common::protected_registry::ProtectedRegistry;
 use crate::server::endpoint::authentication;
 use crate::server::endpoint::download;
 
@@ -24,7 +24,7 @@ pub enum Action {
 pub struct Session {
     encryption_key: Key,
     session_token: String,
-    encrypted_file: Option<ProtectedRegistry>,
+    encrypted_file: ProtectedRegistry,
 }
 
 impl Session {
@@ -39,7 +39,7 @@ impl Session {
     ) -> Result<Session, ErrorMessage> {
         let auth = compute_password_hash(email, password); // TODO modify this function
         let session_token = authentication(email, &auth.master_password_hash, totp_code)?;
-        let encrypted_file = download(&session_token).map_or(None, |reg| Some(reg));
+        let encrypted_file = download(&session_token)?;
         Ok(Session {
             session_token,
             encrypted_file,

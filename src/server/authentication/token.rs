@@ -19,9 +19,7 @@ const TOKEN_LENGTH: usize = 64;
 pub fn generate_token(user_id: i32) -> Token {
     // Validity date
     let validity_start = Utc::now().naive_utc();
-    let validity_end = validity_start
-        .checked_add_signed(Duration::seconds(VALIDITY_DURATION))
-        .unwrap();
+    let validity_end = validity_start + Duration::seconds(VALIDITY_DURATION);
 
     // Generate random token
     let token: String = thread_rng()
