@@ -62,9 +62,8 @@ impl DatabaseConnection {
         // self.delete_expired_token(user);
     }
 
-    pub fn get_user_tokens(&self, user: i32) -> QueryResult<Token> {
-        // TODO return more than one token
-        tokens.filter(user_id.eq(user)).first::<Token>(&self.conn)
+    pub fn get_user_tokens(&self, user: i32) -> QueryResult<Vec<Token>> {
+        tokens.filter(user_id.eq(user)).load::<Token>(&self.conn)
     }
 
     pub fn delete_expired_token(&self, user: &User) {
@@ -79,8 +78,6 @@ pub mod tests {
     use diesel::{SqliteConnection, Connection};
     use tempfile::TempDir;
     use crate::server::authentication::token;
-
-
 
     // This macro from `diesel_migrations` defines an `embedded_migrations` module
     // containing a function named `run`. This allows the example to be run and
@@ -125,15 +122,20 @@ pub mod tests {
         let token = token::generate_token(id_user);
 
         db.add_token(&token);
-        let token2 = db.get_user_tokens(id_user);
-        assert!(token2.is_ok());
-        assert_eq!(token, token2.unwrap());
+        let token_bis = db.get_user_tokens(id_user);
+        assert!(token_bis.is_ok());
+        assert_eq!(token, token_bis.unwrap()[0]);
 
-        // TODO
-        // let token3 = token::generate_token(user_id);
-        //
-        // db.add_token(&token3);
-        // let token4 = db.get_user_tokens(user_id);
-        // println!("{:?}", token4)
+
+        let token2 = token::generate_token(id_user);
+
+        db.add_token(&token2);
+        let token2_bis = db.get_user_tokens(id_user);
+        assert!(&token2_bis.is_ok());
+
+        let result = token2_bis.unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], token);
+        assert_eq!(result[1], token2);
     }
 }
