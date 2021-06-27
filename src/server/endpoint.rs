@@ -1,3 +1,7 @@
+// SEC : Labo project - Authentication
+// Author : Julien Béguin & Gil Balsiger
+// Date : 26.06.2021
+//
 //! Server facade
 
 use crate::common::error_message::ErrorMessage;

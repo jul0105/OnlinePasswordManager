@@ -1,3 +1,7 @@
+// SEC : Labo project - Authentication
+// Author : Julien Béguin & Gil Balsiger
+// Date : 26.06.2021
+//
 //! Online password manager cli
 
 use std::fs::create_dir_all;

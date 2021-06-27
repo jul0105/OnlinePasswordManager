@@ -1,6 +1,7 @@
-//! Author : Julien Béguin & Gil Balsiger
-//! Date : 26.06.2021
-//!
+// SEC : Labo project - Authentication
+// Author : Julien Béguin & Gil Balsiger
+// Date : 26.06.2021
+//
 //! Random token generation and verification
 
 use chrono::{Duration, Utc};

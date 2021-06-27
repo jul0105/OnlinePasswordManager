@@ -1,3 +1,7 @@
+// SEC : Labo project - Authentication
+// Author : Julien Béguin & Gil Balsiger
+// Date : 26.06.2021
+//
 //! Representation of the database in structs
 
 use chrono::NaiveDateTime;

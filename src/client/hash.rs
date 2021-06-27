@@ -1,3 +1,7 @@
+// SEC : Labo project - Authentication
+// Author : Julien Béguin & Gil Balsiger
+// Date : 26.06.2021
+//
 //! Hashing related functions
 
 use argon2::{password_hash::SaltString, Argon2, Params, PasswordHasher};

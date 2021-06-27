@@ -1,3 +1,9 @@
+// SEC : Labo project - Authentication
+// Author : Julien Béguin & Gil Balsiger
+// Date : 26.06.2021
+//
+//! Diesel DB macro
+
 table! {
     tokens (token) {
         token -> Text,
