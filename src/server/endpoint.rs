@@ -4,11 +4,10 @@ use crate::common::error_message::ErrorMessage;
 
 use crate::server::authentication::{password, token, totp};
 
-use base64::read;
 use flate2::read::DeflateDecoder;
 use flate2::write::DeflateEncoder;
 use flate2::Compression;
-use log::{debug, error, info, trace, warn};
+use log::{info, warn};
 use std::env;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};

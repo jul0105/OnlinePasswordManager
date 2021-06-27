@@ -1,6 +1,6 @@
 use strum::EnumMessage;
 
-#[derive(EnumMessage, Debug)]
+#[derive(EnumMessage, Debug, PartialEq)]
 pub enum ErrorMessage {
     #[strum(message = "2 factors authentication is required")]
     TotpRequired,
