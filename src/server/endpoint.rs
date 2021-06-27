@@ -10,7 +10,7 @@ use flate2::Compression;
 use log::{info, warn, error};
 use std::env;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Read, Write, Error};
+use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
 use crate::common::protected_registry::ProtectedRegistry;
@@ -123,7 +123,7 @@ pub fn download(session_token: &str) -> Result<ProtectedRegistry, ErrorMessage> 
                     }
                 }
                 Err(_) => {
-                    info!("Failed to find user {}'s protected registry on the server. Creating a new one.", user.email);
+                    info!("No protected registry for user {}'s on the server. Creating a new one.", user.email);
                     // Create empty ProtectedRegistry
                     let registry = ProtectedRegistry::new();
                     store_protected_registry(
