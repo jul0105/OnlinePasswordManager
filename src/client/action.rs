@@ -71,13 +71,22 @@ impl Session {
     ///
     /// Return ErrorMessage if the password cannot be modified. Ok(()) otherwise
     pub fn modify_password(
-        &self,
-        password_id: u32,
+        &mut self,
+        password_id: usize,
         label: &str,
         username: &str,
         password: &str,
     ) -> Result<(), ErrorMessage> {
-        todo!();
+        let entry : &mut PasswordEntry = match self.registry.entries.get_mut(password_id) {
+            Some(val) => val,
+            None => return Err(ErrorMessage::PasswordEntryNotFound),
+        };
+
+        entry.label = String::from(label);
+        entry.username = String::from(username);
+        entry.password = String::from(password);
+        self.seal_and_send();
+        Ok(())
     }
 
     /// Delete given password in the password manager.

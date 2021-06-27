@@ -197,8 +197,24 @@ fn add_new_password(session: &mut Session) {
     }
 }
 
-fn modify_password(session: &Session) {
-    todo!();
+fn modify_password(session: &mut Session) {
+    let selection = select_password_entry(&session.registry);
+    if let Some(index) = selection {
+
+        let label = ask_label();
+        let username = ask_username();
+        let new_password = ask_new_password();
+
+        match session.modify_password(index, &label, &username, &new_password) {
+            Ok(_) => {
+                println!(
+                    "{}",
+                    style(format!("\n{} Password successfully modified", Emoji("✔", ""))).green()
+                );
+            }
+            Err(e) => display_error(e),
+        }
+    }
 }
 
 fn delete_password(session: &mut Session) {

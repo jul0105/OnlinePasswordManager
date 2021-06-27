@@ -25,4 +25,7 @@ pub enum ErrorMessage {
 
     #[strum(message = "Unable to parse data from server")]
     DeserializeError,
+
+    #[strum(message = "Unable to found password entry.")]
+    PasswordEntryNotFound,
 }
