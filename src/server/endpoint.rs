@@ -171,9 +171,10 @@ pub fn register_new_user(
     let db = DatabaseConnection::new();
     match db.add_user(email, password, totp_secret) {
         Ok(_) => return Ok(String::from("User successfully added")),
-        Err(_) => {
-            return Err(String::from(
-                "Error while adding the user. Please try again",
+        Err(e) => {
+            return Err(format!(
+                "Error while adding the user: {}. Please try again",
+                e
             ))
         }
     }

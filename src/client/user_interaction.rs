@@ -1,6 +1,7 @@
 //! CLI user interaction
 
 use crate::client::action::Session;
+use crate::client::hash::compute_password_hash;
 use crate::common::error_message::ErrorMessage;
 use crate::common::protected_registry::Registry;
 use crate::server::authentication::password::validate;
@@ -255,7 +256,6 @@ fn ask_registration_password() -> String {
     loop {
         let password = Password::with_theme(&ColorfulTheme::default())
             .with_prompt("New Password")
-            .with_confirmation("Confirm password", "Passwords mismatching")
             .interact()
             .unwrap();
 
@@ -268,7 +268,7 @@ fn ask_registration_password() -> String {
 
 pub fn handle_registration() {
     let email = ask_email();
-    let password = ask_password();
+    let password = ask_registration_password();
     let totp_secret = if Confirm::with_theme(&ColorfulTheme::default())
         .with_prompt("Enable 2FA?")
         .default(false)
@@ -289,7 +289,11 @@ pub fn handle_registration() {
         None
     };
 
-    match register_new_user(&email, &password, totp_secret.as_deref()) {
+    match register_new_user(
+        &email,
+        &compute_password_hash(&email, &password).server_auth_password,
+        totp_secret.as_deref(),
+    ) {
         Ok(m) => println!("{}", style(m).green()),
         Err(m) => println!("{}", style(m).red()),
     }
