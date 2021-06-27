@@ -38,12 +38,12 @@ impl Session {
         totp_code: Option<&str>,
     ) -> Result<Session, ErrorMessage> {
         let auth = compute_password_hash(email, password);
-        let session_token = authentication(email, &auth.master_password_hash, totp_code)?;
+        let session_token = authentication(email, &auth.server_auth_password, totp_code)?;
         let protected_registry = download(&session_token)?;
-        let registry = protected_registry.decrypt(&auth.master_key)?;
+        let registry = protected_registry.decrypt(&auth.encryption_key)?;
         Ok(Session {
             session_token,
-            master_key: auth.master_key,
+            master_key: auth.encryption_key,
             registry,
         })
     }
