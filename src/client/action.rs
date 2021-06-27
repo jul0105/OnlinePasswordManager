@@ -120,7 +120,7 @@ mod tests {
         let db = DATABASE.lock().unwrap();
         db.add_user(
             "gil@demo.ch",
-            &compute_password_hash("gil@demo.ch", "coucou").master_password_hash,
+            &compute_password_hash("gil@demo.ch", "coucou").server_auth_password,
             None,
         )
         .unwrap();
