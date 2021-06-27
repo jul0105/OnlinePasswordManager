@@ -10,7 +10,7 @@ use flate2::Compression;
 use log::{info, warn, error};
 use std::env;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::{BufReader, BufWriter, Read, Write, Error};
 use std::path::Path;
 
 use crate::common::protected_registry::ProtectedRegistry;
@@ -176,10 +176,30 @@ fn store_protected_registry(
     registry: &ProtectedRegistry,
     folder: &Path,
 ) -> Result<(), ErrorMessage> {
-    let new_registry_file = File::create(folder.join(user_id.to_string())).unwrap();
-    let serialized_registry = bincode::serialize(&registry).unwrap();
+    let new_registry_file = match File::create(folder.join(user_id.to_string())) {
+        Ok(val) => val,
+        Err(_) => {
+            error!("Unable to create file to store protected registry for userid {} on the server", user_id);
+            return Err(ErrorMessage::ServerSideError);
+        },
+    };
+
+    let serialized_registry = match bincode::serialize(&registry) {
+        Ok(val) => val,
+        Err(_) => {
+            error!("Unable to serialize protected registry for userid {} on the server", user_id);
+            return Err(ErrorMessage::ServerSideError);
+        },
+    };
+
     let mut writer = DeflateEncoder::new(BufWriter::new(new_registry_file), Compression::default());
-    writer.write_all(&serialized_registry).unwrap();
+
+    if let Err(_) = writer.write_all(&serialized_registry) {
+        error!("Unable to write file to store protected registry for userid {} on the server", user_id);
+        return Err(ErrorMessage::ServerSideError);
+    }
+
+    info!("Successful store of protected registry of userid {} on the server", user_id);
     Ok(())
 }
 
@@ -190,8 +210,12 @@ pub fn register_new_user(
 ) -> Result<String, String> {
     let db = DatabaseConnection::new();
     match db.add_user(email, password, totp_secret) {
-        Ok(_) => return Ok(String::from("User successfully added")),
+        Ok(_) => {
+            info!("User {} successfully registered on the server", email);
+            return Ok(String::from("User successfully added"))
+        },
         Err(e) => {
+            error!("Unable to register user {} on the server's DB", email);
             return Err(format!(
                 "Error while adding the user: {}. Please try again",
                 e
