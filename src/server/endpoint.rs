@@ -165,6 +165,23 @@ fn store_protected_registry(
     Ok(())
 }
 
+pub fn register_new_user(
+    email: &str,
+    password: &str,
+    totp_secret: Option<&str>,
+) -> Result<String, String> {
+    let db = DatabaseConnection::new();
+    match db.add_user(email, password, totp_secret) {
+        Ok(_) => return Ok(String::from("User successfully added")),
+        Err(e) => {
+            return Err(format!(
+                "Error while adding the user: {}. Please try again",
+                e
+            ))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
