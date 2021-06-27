@@ -3,6 +3,9 @@
 use crate::client::action::Session;
 use crate::common::error_message::ErrorMessage;
 use crate::common::protected_registry::Registry;
+use crate::server::authentication::password::validate;
+use crate::server::authentication::totp::{display_totp, generate_secret, verify_code};
+use crate::server::endpoint::register_new_user;
 use console::style;
 use console::Emoji;
 use dialoguer::console::Term;
@@ -200,7 +203,6 @@ fn add_new_password(session: &mut Session) {
 fn modify_password(session: &mut Session) {
     let selection = select_password_entry(&session.registry);
     if let Some(index) = selection {
-
         let label = ask_label();
         let username = ask_username();
         let new_password = ask_new_password();
@@ -209,7 +211,11 @@ fn modify_password(session: &mut Session) {
             Ok(_) => {
                 println!(
                     "{}",
-                    style(format!("\n{} Password successfully modified", Emoji("✔", ""))).green()
+                    style(format!(
+                        "\n{} Password successfully modified",
+                        Emoji("✔", "")
+                    ))
+                    .green()
                 );
             }
             Err(e) => display_error(e),
@@ -242,5 +248,49 @@ fn display_error(e: ErrorMessage) {
             e.get_message().unwrap()
         );
         println!("{}", style(&msg).red());
+    }
+}
+
+fn ask_registration_password() -> String {
+    loop {
+        let password = Password::with_theme(&ColorfulTheme::default())
+            .with_prompt("New Password")
+            .with_confirmation("Confirm password", "Passwords mismatching")
+            .interact()
+            .unwrap();
+
+        match validate(&password) {
+            Ok(_) => return password,
+            Err(e) => println!("{}", style(e).red()),
+        }
+    }
+}
+
+pub fn handle_registration() {
+    let email = ask_email();
+    let password = ask_password();
+    let totp_secret = if Confirm::with_theme(&ColorfulTheme::default())
+        .with_prompt("Enable 2FA?")
+        .default(false)
+        .wait_for_newline(true)
+        .interact()
+        .unwrap()
+    {
+        let secret = generate_secret();
+        Some(loop {
+            display_totp(&email, &secret);
+            let code = ask_totp_code();
+            if verify_code(&secret, &code) {
+                break secret;
+            }
+            println!("Invalid code. Please try again");
+        })
+    } else {
+        None
+    };
+
+    match register_new_user(&email, &password, totp_secret.as_deref()) {
+        Ok(m) => println!("{}", style(m).green()),
+        Err(m) => println!("{}", style(m).red()),
     }
 }
