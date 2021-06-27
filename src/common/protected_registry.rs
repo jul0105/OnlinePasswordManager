@@ -39,7 +39,7 @@ impl ProtectedRegistry {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Registry {
     pub entries: Vec<PasswordEntry>,
     nonce: Nonce,
@@ -59,7 +59,7 @@ impl Registry {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PasswordEntry {
     pub label: String,
     pub username: String,
@@ -73,5 +73,47 @@ impl Display for PasswordEntry {
             "Label: {}\nUsername: {}\nPassword: {}",
             self.label, self.username, self.password
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::client::hash::compute_password_hash;
+
+    #[test]
+    fn test_encrypt_decrypt_registry() {
+        let password = PasswordEntry {
+            label: "heig-vd.ch".to_string(),
+            username: "julien".to_string(),
+            password: "1234".to_string()
+        };
+        let password2 = password.clone();
+
+        let registry = Registry {
+            entries: vec![password],
+            nonce: gen_nonce(),
+        };
+
+        // Encrypt and decrypt registry with same key
+        let key = Key([0; 32]);
+        let protected_registry = registry.encrypt(&key);
+        let result = protected_registry.decrypt(&key);
+
+        // Should get same entries before/after
+        assert!(result.is_ok());
+        let registry2 = result.unwrap();
+        assert_eq!(registry, registry2);
+        assert_eq!(password2, registry2.entries[0]);
+
+        // Encrypt and decrypt registry with DIFFERENT key
+        let key = Key([0; 32]);
+        let protected_registry = registry.encrypt(&key);
+        let key = Key([1; 32]);
+        let result = protected_registry.decrypt(&key);
+
+        // Should fail
+        assert!(result.is_err());
+        assert_eq!(result, Err(ErrorMessage::DecryptionFailed));
     }
 }

@@ -141,7 +141,7 @@ mod tests {
         let db = DATABASE.lock().unwrap();
         db.add_user(
             "gil1@demo.ch",
-            &compute_password_hash("gil1@demo.ch", "coucou").master_password_hash,
+            &compute_password_hash("gil1@demo.ch", "coucou").server_auth_password,
             Some("abcd"),
         )
         .unwrap();
@@ -155,7 +155,7 @@ mod tests {
         let db = DATABASE.lock().unwrap();
         db.add_user(
             "gil2@demo.ch",
-            &compute_password_hash("gil2@demo.ch", "coucou").master_password_hash,
+            &compute_password_hash("gil2@demo.ch", "coucou").server_auth_password,
             Some("abcd"),
         )
         .unwrap();
