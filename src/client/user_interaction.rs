@@ -36,15 +36,42 @@ pub enum Action {
     DeletePassword,
 }
 
-pub fn start_client() {
-    println!("Welcome to password manager\n");
+#[derive(Debug, Clone, Copy, Display, EnumIter, EnumString)]
+pub enum AuthChoice {
+    #[strum(to_string = "Register")]
+    Register,
+    #[strum(to_string = "Login")]
+    Login,
+}
 
+pub fn start_client() {
+    println!("-----------------------------------");
+    println!("|   WELCOME TO PASSWORD MANAGER   |");
+    println!("-----------------------------------");
+
+    // Register
+    loop {
+        match ask_auth_choice() {
+            Some(choice) => {
+                match choice {
+                    AuthChoice::Register => handle_registration(),
+                    AuthChoice::Login => break,
+                }
+            }
+            None => {
+                println!("No action choosen. Quitting...");
+                return;
+            }
+        }
+
+    }
+
+    // Login
     let mut session = ask_login();
 
+    // Actions
     loop {
-        let action = ask_action();
-
-        match action {
+        match ask_action() {
             Some(a) => {
                 handle_action(&mut session, a);
             }
@@ -118,6 +145,19 @@ pub fn ask_action() -> Option<Action> {
         .unwrap();
 
     selection.map_or(None, |i| Some(actions[i]))
+}
+
+pub fn ask_auth_choice() -> Option<AuthChoice> {
+    println!();
+    let auth_choice: Vec<AuthChoice> = AuthChoice::iter().collect();
+    let selection = Select::with_theme(&ColorfulTheme::default())
+        .with_prompt("Choose an action")
+        .items(&auth_choice)
+        .default(0)
+        .interact_on_opt(&Term::stderr())
+        .unwrap();
+
+    selection.map_or(None, |i| Some(auth_choice[i]))
 }
 
 fn handle_action(session: &mut Session, action: Action) {

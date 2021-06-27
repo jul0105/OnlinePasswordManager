@@ -6,7 +6,7 @@
 
 use std::fs::create_dir_all;
 
-use crate::client::user_interaction::{handle_registration, start_client};
+use crate::client::user_interaction::start_client;
 use dotenv::dotenv;
 use log::LevelFilter;
 use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
@@ -31,45 +31,22 @@ mod server;
 #[structopt(
     author = "Gil Balsiger <gil.balsiger@heig-vd.ch> and Julien Béguin <julien.beguin@heig-vd.ch>"
 )]
-struct Opts {
-    /// Manually add a user to database (used for development)
-    #[structopt(long)]
-    add_user: bool,
-}
+struct Opts {}
 
 fn main() {
-    let opts: Opts = StructOpt::from_args();
+    let _ : Opts = StructOpt::from_args();
     dotenv().ok();
 
     TermLogger::init(
-        LevelFilter::Trace,
+        LevelFilter::Info,
         Config::default(),
         TerminalMode::Stderr,
         ColorChoice::Auto,
-    )
-    .unwrap();
+    ).unwrap();
 
     // Create server_data dir
     create_dir_all("server_data").ok();
 
-    if opts.add_user {
-        handle_registration();
-    } else {
-        start_client();
-    }
-}
-
-#[cfg(test)]
-pub mod tests {
-    use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
-
-    pub fn init_test_logger() {
-        TermLogger::init(
-            LevelFilter::Trace,
-            Config::default(),
-            TerminalMode::Stdout,
-            ColorChoice::Auto,
-        )
-        .unwrap();
-    }
+    // Start system
+    start_client();
 }
