@@ -163,4 +163,37 @@ mod tests {
         assert!(session.is_err(), "{:?}", session);
         assert_eq!(ErrorMessage::InvalidTotpCode, session.unwrap_err());
     }
+
+    #[test]
+    fn test_add_password() {
+        let db = DATABASE.lock().unwrap();
+        db.add_user(
+            "gil3@demo.ch",
+            &compute_password_hash("gil3@demo.ch", "coucou").server_auth_password,
+            None,
+        )
+        .unwrap();
+        let mut session = Session::login("gil3@demo.ch", "coucou", None).unwrap();
+        assert_eq!(0, session.registry.entries.len());
+        let res = session.add_password("hello", "demo", "1234");
+        assert_eq!(1, session.registry.entries.len());
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_delete_password() {
+        let db = DATABASE.lock().unwrap();
+        db.add_user(
+            "gil4@demo.ch",
+            &compute_password_hash("gil4@demo.ch", "coucou").server_auth_password,
+            None,
+        )
+        .unwrap();
+        let mut session = Session::login("gil4@demo.ch", "coucou", None).unwrap();
+        session.add_password("hello", "demo", "1234").unwrap();
+        assert_eq!(1, session.registry.entries.len());
+        let res = session.delete_password(0);
+        assert!(res.is_ok());
+        assert_eq!(0, session.registry.entries.len());
+    }
 }
