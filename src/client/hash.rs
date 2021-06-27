@@ -5,16 +5,27 @@ use base64::encode;
 use sha3::{Digest, Sha3_256};
 use sodiumoxide::crypto::aead::Key;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct MasterAuth {
     /// Useful key to encrypt or decrypt data  
     /// **Warning**: never transmit it to the server
-    pub master_key: Key,
+    pub encryption_key: Key,
 
     /// Used for authentication to the server
-    pub master_password_hash: String,
+    pub server_auth_password: String,
 }
 
+/// Generate key material for the client
+///
+/// The protected registry's encryption key is derived from the password using Argon2id and email as hash
+/// Since the client has to authenticate with the server using a password, the encryption key is re-hashed
+/// to get the "server_auth_password" that will be used as a password with the server
+///
+/// In summary:
+/// password --(hashing)--> encryption_key --(hashing)--> server_auth_password
+/// The server will receive server_auth_password but cannot derive encryption_key
+///
+/// Return encryption_key and server_auth_password
 pub fn compute_password_hash(email: &str, password: &str) -> MasterAuth {
     let argon = Argon2::default();
     let email_hash = &encode(Sha3_256::digest(&email.as_bytes()))[..16];
@@ -46,7 +57,30 @@ pub fn compute_password_hash(email: &str, password: &str) -> MasterAuth {
         .to_string();
 
     MasterAuth {
-        master_key: Key::from_slice(&master_key).unwrap(),
-        master_password_hash,
+        encryption_key: Key::from_slice(&master_key).unwrap(),
+        server_auth_password: master_password_hash,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compute_password_hash() {
+        let master_auth1 = compute_password_hash("julien@heig-vd.ch", "123456789");
+        assert_eq!(master_auth1.encryption_key.0.len(), 32);
+
+        // Equal if same parameters
+        let master_auth2 = compute_password_hash("julien@heig-vd.ch", "123456789");
+        assert_eq!(master_auth1, master_auth2);
+
+        // Not equal if different email
+        let master_auth3 = compute_password_hash("ju@he.ch", "123456789");
+        assert_ne!(master_auth1, master_auth3);
+
+        // Not equal if different password
+        let master_auth4 = compute_password_hash("julien@heig-vd.ch", "abcd");
+        assert_ne!(master_auth1, master_auth4);
     }
 }

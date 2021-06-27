@@ -81,7 +81,7 @@ fn main() {
         let db = DatabaseConnection::new();
         match db.add_user(
             &email,
-            &compute_password_hash(&email, &password).master_password_hash,
+            &compute_password_hash(&email, &password).server_auth_password,
             totp_secret.as_deref(),
         ) {
             Ok(_) => println!("{}", style("User successfully added").green()),
