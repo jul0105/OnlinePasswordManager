@@ -6,13 +6,18 @@
 </a>
 <img alt="pipeline status" src="https://img.shields.io/static/v1?logo=rust&label=Made%20in&message=Rust&color=blue" />
 </div>
-
 ## Package documentation
 
-The online documentation for the crate is available [here](https://jul0105.gitlab.io/SEC_Projet/sec_project/index.html).
+This crate has an online documentation available [here](https://jul0105.gitlab.io/SEC_Projet/sec_project/index.html).
 
-Generate the documentation with the following command :
+You can also generate the documentation locally with the following command :
 
 ```
 cargo doc --no-deps --open
 ```
+
+
+
+## Specification
+
+See `SPECIFICATIONS.md`
