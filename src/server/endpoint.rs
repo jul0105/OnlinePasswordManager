@@ -8,7 +8,7 @@ use base64::read;
 use flate2::read::DeflateDecoder;
 use flate2::write::DeflateEncoder;
 use flate2::Compression;
-use log::{info, warn};
+use log::{info, warn, trace, debug, error};
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
@@ -30,7 +30,7 @@ fn authenticate(
     let user = match db.get_user(email) {
         Ok(user) => user,
         Err(_) => {
-            warn!("User {} failed to authenticate with the server. The provided email-password combination is not present in DB.", email);
+            warn!("User {} failed to authenticate with the server. The provided email-password combination is not present in DB.", email); // TODO change message
 
             // Fake Argon2 for timing attacks
             password::verify("$argon2id$v=19$m=4096,t=3,p=1$spbfQIc9BCO2mWdMRMp3iQ$+tJffBAuOCQqKbVa9Db2P+zrQd6YbdTzxg41jY20odY", "demo");
@@ -41,10 +41,7 @@ fn authenticate(
 
     // Hash password
     if !password::verify(&user.password_hash, password) {
-        warn!(
-            "User {} failed to authenticate with the server. Incorrect password",
-            email
-        );
+        warn!("User {} failed to authenticate with the server. Incorrect password", email);
         return Err(ErrorMessage::AuthFailed);
     }
 

@@ -41,8 +41,9 @@ fn main() {
     let opts: Opts = StructOpt::from_args();
     dotenv().ok();
 
+    // TODO set to info
     TermLogger::init(
-        LevelFilter::Debug,
+        LevelFilter::Trace,
         Config::default(),
         TerminalMode::Stderr,
         ColorChoice::Auto,

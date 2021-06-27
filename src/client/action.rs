@@ -95,3 +95,12 @@ impl Session {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::init_test_logger;
+
+    #[test]
+    fn test() {}
+}
