@@ -51,7 +51,6 @@ pub fn ask_email() -> String {
 }
 
 pub fn ask_password() -> String {
-    // TODO Check password client-side (it's the only way, we cannot send the password to the server)
     Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Password")
         .interact()

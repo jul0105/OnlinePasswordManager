@@ -44,12 +44,10 @@ impl DatabaseConnection {
         users.filter(email.eq(user_email)).first::<User>(&self.conn)
     }
 
-    pub fn add_token(&self, new_token: &Token) {
+    pub fn add_token(&self, new_token: &Token) -> QueryResult<usize> {
         use super::schema::tokens::dsl::*;
 
-        insert_into(tokens).values(new_token).execute(&self.conn);
-        // TODO handle result
-        // self.delete_expired_token(user);
+        insert_into(tokens).values(new_token).execute(&self.conn)
     }
 
     pub fn delete_expired_token(&self, user: &User) {
@@ -115,7 +113,8 @@ pub mod tests {
             .unwrap();
         let user_id = db.get_user("gil@heig-vd.ch").unwrap().id;
         let token = token::generate_token(user_id);
-        db.add_token(&token);
+        let result = db.add_token(&token);
+        assert!(result.is_ok());
         let user = db.get_user_from_token(&token.token);
         assert!(user.is_ok(), "{:?}", user);
         assert_eq!(user_id, user.unwrap().id);

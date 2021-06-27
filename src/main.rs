@@ -41,19 +41,16 @@ fn main() {
     let opts: Opts = StructOpt::from_args();
     dotenv().ok();
 
-    // TODO set to info
     TermLogger::init(
         LevelFilter::Trace,
         Config::default(),
         TerminalMode::Stderr,
         ColorChoice::Auto,
-    )
-    .unwrap(); // TODO log in file ?
+    ).unwrap();
 
     // Create server_data dir
     create_dir_all("server_data").ok();
 
-    // TODO remove that ?
     if opts.add_user {
         let email = ask_email();
         let password = ask_password();

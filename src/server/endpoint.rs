@@ -30,7 +30,7 @@ fn authenticate(
     let user = match db.get_user(email) {
         Ok(user) => user,
         Err(_) => {
-            warn!("User {} failed to authenticate with the server. The provided email-password combination is not present in DB.", email); // TODO change message
+            warn!("User {} is not present in DB.", email);
 
             // Fake Argon2 for timing attacks
             password::verify("$argon2id$v=19$m=4096,t=3,p=1$spbfQIc9BCO2mWdMRMp3iQ$+tJffBAuOCQqKbVa9Db2P+zrQd6YbdTzxg41jY20odY", "demo");
@@ -70,7 +70,9 @@ fn authenticate(
         let token = token::generate_token(user.id);
 
         // Store whole token in DB
-        db.add_token(&token);
+        if db.add_token(&token).is_err() {
+            return Err(ErrorMessage::ServerSideError);
+        }
 
         info!("User {} successfully authenticated with the server.", email);
         Ok(token.token)
@@ -182,4 +184,6 @@ mod tests {
         assert!(authenticate(&db, "albert@he.ch", "123456789", None).is_err());
         assert!(authenticate(&db, "albert@heig-vd.ch", "1234", None).is_err());
     }
+
+
 }
