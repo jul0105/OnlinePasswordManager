@@ -234,19 +234,19 @@ mod tests {
     use crate::server::repository::tests::DATABASE;
 
     #[test]
-    fn test_authentication() {
+    fn test_endpoints() {
         let db = DATABASE.lock().unwrap();
 
-        let qres = db.add_user("albert@heig-vd.ch", "123456789", None);
-        assert!(qres.is_ok());
+        // Register
+        let res = register_new_user("albert@heig-vd.ch", "123456789", None);
+        assert!(res.is_ok());
         assert!(db.get_user("albert@heig-vd.ch").is_ok());
 
+        // Authenticate
         let auth = authenticate(&db, "albert@heig-vd.ch", "123456789", None);
         assert!(auth.is_ok(), "{:?}", auth);
 
         assert!(authenticate(&db, "albert@he.ch", "123456789", None).is_err());
         assert!(authenticate(&db, "albert@heig-vd.ch", "1234", None).is_err());
     }
-
-
 }
