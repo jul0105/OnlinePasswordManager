@@ -24,7 +24,7 @@ pub enum Action {
 pub struct Session {
     master_key: Key,
     session_token: String,
-    pub registry: Registry,
+    pub registry: Registry, // TODO should be private
 }
 
 impl Session {
@@ -98,6 +98,9 @@ impl Session {
         self.seal_and_send()
     }
 
+    /// Encrypt the protected registry and send it to the server
+    ///
+    /// Return server's error if upload fail or Ok if successful
     fn seal_and_send(&self) -> Result<(), ErrorMessage> {
         let protected_registry = self.registry.encrypt(&self.master_key);
         upload(&self.session_token, protected_registry)?;
