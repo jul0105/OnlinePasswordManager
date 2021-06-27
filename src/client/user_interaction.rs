@@ -25,7 +25,7 @@ use strum::{Display, EnumIter, EnumString};
 use crate::server::authentication::email::{store, validate_email};
 
 #[derive(Debug, Clone, Copy, Display, EnumIter, EnumString)]
-pub enum Action {
+enum Action {
     #[strum(to_string = "Read one password")]
     ReadPassword,
     #[strum(to_string = "Add a new password")]
@@ -37,7 +37,7 @@ pub enum Action {
 }
 
 #[derive(Debug, Clone, Copy, Display, EnumIter, EnumString)]
-pub enum AuthChoice {
+enum AuthChoice {
     #[strum(to_string = "Register")]
     Register,
     #[strum(to_string = "Login")]
@@ -83,7 +83,7 @@ pub fn start_client() {
     }
 }
 
-pub fn ask_email() -> String {
+fn ask_email() -> String {
     Input::<String>::with_theme(&ColorfulTheme::default())
         .with_prompt("Email")
         .validate_with(|val: &String| {
@@ -97,21 +97,21 @@ pub fn ask_email() -> String {
         .unwrap()
 }
 
-pub fn ask_password() -> String {
+fn ask_password() -> String {
     Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Password")
         .interact()
         .unwrap()
 }
 
-pub fn ask_totp_code() -> String {
+fn ask_totp_code() -> String {
     Input::<String>::with_theme(&ColorfulTheme::default())
         .with_prompt("Enter 6 digits code")
         .interact_text()
         .unwrap()
 }
 
-pub fn ask_login() -> Session {
+fn ask_login() -> Session {
     loop {
         let email = store(&ask_email());
         let password = ask_password();
@@ -134,7 +134,7 @@ pub fn ask_login() -> Session {
     }
 }
 
-pub fn ask_action() -> Option<Action> {
+fn ask_action() -> Option<Action> {
     println!();
     let actions: Vec<Action> = Action::iter().collect();
     let selection = Select::with_theme(&ColorfulTheme::default())
@@ -147,11 +147,11 @@ pub fn ask_action() -> Option<Action> {
     selection.map_or(None, |i| Some(actions[i]))
 }
 
-pub fn ask_auth_choice() -> Option<AuthChoice> {
+fn ask_auth_choice() -> Option<AuthChoice> {
     println!();
     let auth_choice: Vec<AuthChoice> = AuthChoice::iter().collect();
     let selection = Select::with_theme(&ColorfulTheme::default())
-        .with_prompt("Choose an action")
+        .with_prompt("Choose an action:")
         .items(&auth_choice)
         .default(0)
         .interact_on_opt(&Term::stderr())
@@ -321,7 +321,7 @@ fn ask_registration_password() -> String {
     }
 }
 
-pub fn handle_registration() {
+fn handle_registration() {
     let email = store(&ask_email());
     let password = ask_registration_password();
     let totp_secret = if Confirm::with_theme(&ColorfulTheme::default())
