@@ -9,6 +9,7 @@ use rand::{thread_rng, Rng};
 
 use crate::common::error_message::ErrorMessage;
 use crate::server::models::Token;
+use log::{warn};
 
 // Token is valid during 24 hours minutes
 const VALIDITY_DURATION: i64 = 24 * 60 * 60;
@@ -40,6 +41,7 @@ pub fn generate_token(user_id: i32) -> Token {
 pub fn validate_token(token: &Token) -> Result<(), ErrorMessage> {
     let now = Utc::now().naive_utc();
     if now < token.validity_start || now > token.validity_end {
+        warn!("Token validation failed. Expired token for userid {}", token.user_id);
         return Err(ErrorMessage::TokenExpired);
     } else {
         return Ok(());

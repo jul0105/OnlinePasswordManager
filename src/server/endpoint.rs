@@ -7,7 +7,7 @@ use crate::server::authentication::{password, token, totp};
 use flate2::read::DeflateDecoder;
 use flate2::write::DeflateEncoder;
 use flate2::Compression;
-use log::{info, warn};
+use log::{info, warn, error};
 use std::env;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
@@ -71,6 +71,7 @@ fn authenticate(
 
         // Store whole token in DB
         if db.add_token(&token).is_err() {
+            error!("Unable to store user {}'s session token in the server's DB.", user.email);
             return Err(ErrorMessage::ServerSideError);
         }
 
@@ -101,6 +102,7 @@ pub fn download(session_token: &str) -> Result<ProtectedRegistry, ErrorMessage> 
 
     match db.get_user_from_token(session_token) {
         Ok(user) => {
+            info!("User {} authenticated successfully on the server with session token during download procedure.", user.email);
             match File::open(
                 Path::new(&env::var("SERVER_DATA").expect("SERVER_DATA not set"))
                     .join(user.id.to_string()),
@@ -110,23 +112,34 @@ pub fn download(session_token: &str) -> Result<ProtectedRegistry, ErrorMessage> 
                     let mut reader = DeflateDecoder::new(BufReader::new(file));
                     reader.read_to_end(&mut buffer).unwrap();
                     match bincode::deserialize(&buffer) {
-                        Ok(data) => Ok(data),
-                        Err(_) => Err(ErrorMessage::DeserializeError),
+                        Ok(data) => {
+                            info!("User {} successfully downloaded its protected registry from the server.", user.email);
+                            Ok(data)
+                        },
+                        Err(_) => {
+                            error!("Deserialization error happened while trying to download user {}'s protected registry from the server.", user.email);
+                            Err(ErrorMessage::DeserializeError)
+                        },
                     }
                 }
                 Err(_) => {
-                    // Create empty ProjectedRegistry
+                    info!("Failed to find user {}'s protected registry on the server. Creating a new one.", user.email);
+                    // Create empty ProtectedRegistry
                     let registry = ProtectedRegistry::new();
                     store_protected_registry(
                         user.id,
                         &registry,
                         Path::new(&env::var("SERVER_DATA").expect("SERVER_DATA not set")),
                     )?;
+                    info!("New protected registry created on the server for user {}.", user.email);
                     return Ok(registry);
                 }
             }
         }
-        Err(error) => return Err(error),
+        Err(error) => {
+            warn!("Download attempt failed on the server. The provided session token is not valid");
+            return Err(error)
+        },
     }
 }
 
@@ -141,14 +154,19 @@ pub fn upload(
 
     match db.get_user_from_token(session_token) {
         Ok(user) => {
+            info!("User {} authenticated successfully on the server with session token during upload procedure.", user.email);
             store_protected_registry(
                 user.id,
                 &protected_registry,
                 Path::new(&env::var("SERVER_DATA").expect("SERVER_DATA not set")),
             )?;
+            info!("User {} successfully uploaded its protected registry to the server.", user.email);
             Ok(())
         }
-        Err(e) => Err(e),
+        Err(e) => {
+            warn!("Upload attempt failed on the server. The provided session token is not valid");
+            Err(e)
+        },
     }
 }
 
