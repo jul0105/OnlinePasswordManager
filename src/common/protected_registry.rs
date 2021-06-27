@@ -87,14 +87,13 @@ impl Display for PasswordEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::client::hash::compute_password_hash;
 
     #[test]
     fn test_encrypt_decrypt_registry() {
         let password = PasswordEntry {
             label: "heig-vd.ch".to_string(),
             username: "julien".to_string(),
-            password: "1234".to_string()
+            password: "1234".to_string(),
         };
         let password2 = password.clone();
 
