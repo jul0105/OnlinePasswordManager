@@ -1,3 +1,5 @@
+//! Password registry store and encryption
+
 use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
@@ -5,6 +7,7 @@ use sodiumoxide::crypto::aead::{gen_nonce, open, seal, Key, Nonce};
 
 use super::error_message::ErrorMessage;
 
+/// Password registry encrypted
 #[derive(Serialize, Deserialize)]
 pub struct ProtectedRegistry {
     protected_entries: Vec<u8>,
@@ -12,12 +15,15 @@ pub struct ProtectedRegistry {
 }
 
 impl ProtectedRegistry {
+    /// Generate empty password registry (no content to be encrypted)
     pub fn new() -> Self {
         ProtectedRegistry {
             protected_entries: Vec::new(),
             nonce: gen_nonce(),
         }
     }
+
+    /// Decrypt password registry and return Registry if valid
     pub fn decrypt(&self, master_key: &Key) -> Result<Registry, ErrorMessage> {
         if self.protected_entries.len() > 0 {
             match open(&self.protected_entries, None, &self.nonce, master_key) {
@@ -39,6 +45,7 @@ impl ProtectedRegistry {
     }
 }
 
+/// Password registry decrypted
 #[derive(Debug, PartialEq)]
 pub struct Registry {
     pub entries: Vec<PasswordEntry>,
@@ -46,6 +53,7 @@ pub struct Registry {
 }
 
 impl Registry {
+    /// Encrypt password registry and return ProtectedRegistry
     pub fn encrypt(&self, master_key: &Key) -> ProtectedRegistry {
         ProtectedRegistry {
             nonce: self.nonce,
@@ -115,5 +123,13 @@ mod tests {
         // Should fail
         assert!(result.is_err());
         assert_eq!(result, Err(ErrorMessage::DecryptionFailed));
+    }
+
+    #[test]
+    fn test_new_protected_registry() {
+        let protected_registry = ProtectedRegistry::new();
+
+        // Entries should be empty
+        assert_eq!(protected_registry.protected_entries.len(), 0);
     }
 }
