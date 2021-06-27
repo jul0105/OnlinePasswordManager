@@ -18,7 +18,7 @@ use strum::EnumMessage;
 use strum::IntoEnumIterator;
 
 use super::action::Action;
-use crate::server::authentication::email::validate_email;
+use crate::server::authentication::email::{store, validate_email};
 
 pub fn start_client() {
     println!("Welcome to password manager\n");
@@ -70,17 +70,17 @@ pub fn ask_totp_code() -> String {
 
 pub fn ask_login() -> Session {
     loop {
-        let username = ask_email();
+        let email = store(&ask_email());
         let password = ask_password();
 
         // First try with no totp code
-        match Session::login(&username, &password, None) {
+        match Session::login(&email, &password, None) {
             Ok(session) => return session,
             Err(error) => match error {
                 ErrorMessage::TotpRequired => loop {
                     // If totp is required we ask it after we are sure the password is correct
                     let totp_code = ask_totp_code();
-                    match Session::login(&username, &password, Some(&totp_code)) {
+                    match Session::login(&email, &password, Some(&totp_code)) {
                         Ok(session) => return session,
                         Err(e) => display_error(e),
                     }
@@ -266,7 +266,7 @@ fn ask_registration_password() -> String {
 }
 
 pub fn handle_registration() {
-    let email = ask_email();
+    let email = store(&ask_email());
     let password = ask_registration_password();
     let totp_secret = if Confirm::with_theme(&ColorfulTheme::default())
         .with_prompt("Enable 2FA?")

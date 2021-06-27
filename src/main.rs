@@ -2,13 +2,7 @@
 
 use std::fs::create_dir_all;
 
-use crate::client::user_interaction::{ask_totp_code, handle_registration, start_client};
-use crate::server::authentication::totp::{display_totp, verify_code};
-use crate::server::repository::DatabaseConnection;
-use client::hash::compute_password_hash;
-use client::user_interaction::{ask_email, ask_password};
-use console::style;
-use dialoguer::{theme::ColorfulTheme, Confirm};
+use crate::client::user_interaction::{handle_registration, start_client};
 use dotenv::dotenv;
 use log::LevelFilter;
 use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
@@ -17,9 +11,11 @@ use structopt::StructOpt;
 #[macro_use]
 extern crate diesel;
 
+#[allow(unused_imports)]
 #[macro_use]
 extern crate diesel_migrations;
 
+#[allow(unused_imports)]
 #[macro_use]
 extern crate lazy_static;
 
@@ -46,7 +42,8 @@ fn main() {
         Config::default(),
         TerminalMode::Stderr,
         ColorChoice::Auto,
-    ).unwrap();
+    )
+    .unwrap();
 
     // Create server_data dir
     create_dir_all("server_data").ok();

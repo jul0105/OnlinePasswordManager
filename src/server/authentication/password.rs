@@ -7,7 +7,6 @@ use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-use log::debug;
 use rand_core::OsRng;
 use zxcvbn::feedback;
 use zxcvbn::zxcvbn;
