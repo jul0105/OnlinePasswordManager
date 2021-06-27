@@ -47,11 +47,12 @@ fn main() {
         TerminalMode::Stderr,
         ColorChoice::Auto,
     )
-    .unwrap();
+    .unwrap(); // TODO log in file ?
 
     // Create server_data dir
     create_dir_all("server_data").ok();
 
+    // TODO remove that ?
     if opts.add_user {
         let email = ask_email();
         let password = ask_password();
@@ -94,10 +95,17 @@ fn main() {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
+    use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 
-    #[test]
-    fn test_ok() {
-        assert_eq!(4, 2 + 2);
+    pub fn init_test_logger() {
+        TermLogger::init(
+            LevelFilter::Trace,
+            Config::default(),
+            TerminalMode::Stdout,
+            ColorChoice::Auto,
+        ).unwrap();
     }
+
+
 }

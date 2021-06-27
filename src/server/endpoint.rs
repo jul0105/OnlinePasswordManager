@@ -151,20 +151,9 @@ fn store_protected_registry(
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::*;
     use crate::server::repository::tests::DATABASE;
-    use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
-
-    pub fn init_logger() {
-        TermLogger::init(
-            LevelFilter::Trace,
-            Config::default(),
-            TerminalMode::Stdout,
-            ColorChoice::Auto,
-        )
-        .unwrap();
-    }
 
     #[test]
     fn test_authentication() {
