@@ -3,3 +3,4 @@
 .vscode
 /server_data
 data.db
+/test_data

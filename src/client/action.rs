@@ -21,6 +21,7 @@ pub enum Action {
     DeletePassword,
 }
 
+#[derive(Debug)]
 pub struct Session {
     master_key: Key,
     session_token: String,
@@ -77,7 +78,7 @@ impl Session {
         username: &str,
         password: &str,
     ) -> Result<(), ErrorMessage> {
-        let entry : &mut PasswordEntry = match self.registry.entries.get_mut(password_id) {
+        let entry: &mut PasswordEntry = match self.registry.entries.get_mut(password_id) {
             Some(val) => val,
             None => return Err(ErrorMessage::PasswordEntryNotFound),
         };
@@ -85,7 +86,7 @@ impl Session {
         entry.label = String::from(label);
         entry.username = String::from(username);
         entry.password = String::from(password);
-        self.seal_and_send();
+        self.seal_and_send()?;
         Ok(())
     }
 
@@ -110,9 +111,20 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
-    use crate::tests::init_test_logger;
+    use crate::server::repository::tests::DATABASE;
 
     #[test]
-    fn test() {}
+    fn test() {
+        let db = DATABASE.lock().unwrap();
+        db.add_user(
+            "gil@demo.ch",
+            &compute_password_hash("gil@demo.ch", "coucou").master_password_hash,
+            None,
+        )
+        .unwrap();
+        let session = Session::login("gil@demo.ch", "coucou", None);
+        assert!(session.is_ok(), "{:?}", session);
+    }
 }

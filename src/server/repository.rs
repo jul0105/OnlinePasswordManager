@@ -78,14 +78,22 @@ pub mod tests {
     use super::*;
     use crate::server::authentication::token;
     use diesel::{Connection, SqliteConnection};
-    use std::sync::Mutex;
+    use std::{
+        fs::{create_dir, remove_dir_all},
+        sync::Mutex,
+    };
 
     lazy_static! {
         pub static ref DATABASE: Mutex<DatabaseConnection> = {
+            remove_dir_all("test_data").ok();
+            create_dir("test_data").ok();
             embed_migrations!("migrations");
-            let conn =
-                SqliteConnection::establish(":memory:").expect("Unable to connect to database");
+            let conn = SqliteConnection::establish("test_data/test.db")
+                .expect("Unable to connect to database");
             embedded_migrations::run(&conn).expect("Cannot run migrations");
+            env::set_var("DATABASE_URL", "test_data/test.db");
+            env::set_var("SERVER_DATA", "test_data");
+
             Mutex::new(DatabaseConnection { conn })
         };
     }
