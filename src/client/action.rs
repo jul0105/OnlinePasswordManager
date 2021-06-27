@@ -116,7 +116,7 @@ mod tests {
     use crate::server::repository::tests::DATABASE;
 
     #[test]
-    fn test() {
+    fn test_login() {
         let db = DATABASE.lock().unwrap();
         db.add_user(
             "gil@demo.ch",
@@ -126,5 +126,41 @@ mod tests {
         .unwrap();
         let session = Session::login("gil@demo.ch", "coucou", None);
         assert!(session.is_ok(), "{:?}", session);
+    }
+
+    #[test]
+    fn test_login_failed() {
+        DATABASE.lock().ok();
+        let session = Session::login("albert@demo.ch", "coucou", None);
+        assert!(session.is_err(), "{:?}", session);
+        assert_eq!(ErrorMessage::AuthFailed, session.unwrap_err());
+    }
+
+    #[test]
+    fn test_login_failed_totp() {
+        let db = DATABASE.lock().unwrap();
+        db.add_user(
+            "gil1@demo.ch",
+            &compute_password_hash("gil1@demo.ch", "coucou").master_password_hash,
+            Some("abcd"),
+        )
+        .unwrap();
+        let session = Session::login("gil1@demo.ch", "coucou", None);
+        assert!(session.is_err(), "{:?}", session);
+        assert_eq!(ErrorMessage::TotpRequired, session.unwrap_err());
+    }
+
+    #[test]
+    fn test_login_totp_invalid() {
+        let db = DATABASE.lock().unwrap();
+        db.add_user(
+            "gil2@demo.ch",
+            &compute_password_hash("gil2@demo.ch", "coucou").master_password_hash,
+            Some("abcd"),
+        )
+        .unwrap();
+        let session = Session::login("gil2@demo.ch", "coucou", Some("123456"));
+        assert!(session.is_err(), "{:?}", session);
+        assert_eq!(ErrorMessage::InvalidTotpCode, session.unwrap_err());
     }
 }
