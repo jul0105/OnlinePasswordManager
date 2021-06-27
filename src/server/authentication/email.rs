@@ -1,7 +1,7 @@
-//! SEC : Labo project - Authentication
-//! Author : Julien Béguin & Gil Balsiger
-//! Date : 26.06.2021
-//!
+// SEC : Labo project - Authentication
+// Author : Julien Béguin & Gil Balsiger
+// Date : 26.06.2021
+//
 //! Email validation
 
 use lazy_static::lazy_static;
