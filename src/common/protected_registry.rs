@@ -39,6 +39,7 @@ impl ProtectedRegistry {
     }
 }
 
+#[derive(Debug)]
 pub struct Registry {
     pub entries: Vec<PasswordEntry>,
     nonce: Nonce,
@@ -58,7 +59,7 @@ impl Registry {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PasswordEntry {
     pub label: String,
     pub username: String,

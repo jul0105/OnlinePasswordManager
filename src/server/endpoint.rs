@@ -8,7 +8,8 @@ use base64::read;
 use flate2::read::DeflateDecoder;
 use flate2::write::DeflateEncoder;
 use flate2::Compression;
-use log::{info, warn, trace, debug, error};
+use log::{debug, error, info, trace, warn};
+use std::env;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
@@ -41,7 +42,10 @@ fn authenticate(
 
     // Hash password
     if !password::verify(&user.password_hash, password) {
-        warn!("User {} failed to authenticate with the server. Incorrect password", email);
+        warn!(
+            "User {} failed to authenticate with the server. Incorrect password",
+            email
+        );
         return Err(ErrorMessage::AuthFailed);
     }
 
@@ -95,23 +99,32 @@ pub fn download(session_token: &str) -> Result<ProtectedRegistry, ErrorMessage> 
     let db = DatabaseConnection::new();
 
     match db.get_user_from_token(session_token) {
-        Ok(user) => match File::open(Path::new("server_data").join(user.id.to_string())) {
-            Ok(file) => {
-                let mut buffer = Vec::new();
-                let mut reader = DeflateDecoder::new(BufReader::new(file));
-                reader.read_to_end(&mut buffer).unwrap();
-                match bincode::deserialize(&buffer) {
-                    Ok(data) => Ok(data),
-                    Err(_) => Err(ErrorMessage::DeserializeError),
+        Ok(user) => {
+            match File::open(
+                Path::new(&env::var("SERVER_DATA").expect("SERVER_DATA not set"))
+                    .join(user.id.to_string()),
+            ) {
+                Ok(file) => {
+                    let mut buffer = Vec::new();
+                    let mut reader = DeflateDecoder::new(BufReader::new(file));
+                    reader.read_to_end(&mut buffer).unwrap();
+                    match bincode::deserialize(&buffer) {
+                        Ok(data) => Ok(data),
+                        Err(_) => Err(ErrorMessage::DeserializeError),
+                    }
+                }
+                Err(_) => {
+                    // Create empty ProjectedRegistry
+                    let registry = ProtectedRegistry::new();
+                    store_protected_registry(
+                        user.id,
+                        &registry,
+                        Path::new(&env::var("SERVER_DATA").expect("SERVER_DATA not set")),
+                    )?;
+                    return Ok(registry);
                 }
             }
-            Err(_) => {
-                // Create empty ProjectedRegistry
-                let registry = ProtectedRegistry::new();
-                store_protected_registry(user.id, &registry, Path::new("server_data"))?;
-                return Ok(registry);
-            }
-        },
+        }
         Err(error) => return Err(error),
     }
 }
@@ -127,7 +140,11 @@ pub fn upload(
 
     match db.get_user_from_token(session_token) {
         Ok(user) => {
-            store_protected_registry(user.id, &protected_registry, Path::new("server_data"))?;
+            store_protected_registry(
+                user.id,
+                &protected_registry,
+                Path::new(&env::var("SERVER_DATA").expect("SERVER_DATA not set")),
+            )?;
             Ok(())
         }
         Err(e) => Err(e),
