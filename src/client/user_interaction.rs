@@ -20,9 +20,21 @@ use dialoguer::Select;
 use dialoguer::{Confirm, Input};
 use strum::EnumMessage;
 use strum::IntoEnumIterator;
+use strum::{Display, EnumIter, EnumString};
 
-use super::action::Action;
 use crate::server::authentication::email::{store, validate_email};
+
+#[derive(Debug, Clone, Copy, Display, EnumIter, EnumString)]
+pub enum Action {
+    #[strum(to_string = "Read one password")]
+    ReadPassword,
+    #[strum(to_string = "Add a new password")]
+    AddNewPassword,
+    #[strum(to_string = "Edit an existing password")]
+    EditPassword,
+    #[strum(to_string = "Delete an existing password")]
+    DeletePassword,
+}
 
 pub fn start_client() {
     println!("Welcome to password manager\n");

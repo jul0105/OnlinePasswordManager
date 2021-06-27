@@ -54,10 +54,6 @@ impl DatabaseConnection {
         insert_into(tokens).values(new_token).execute(&self.conn)
     }
 
-    pub fn delete_expired_token(&self, user: &User) {
-        todo!();
-    }
-
     pub fn get_user_from_token(&self, given_token: &str) -> Result<User, ErrorMessage> {
         use super::schema::tokens::dsl::*;
         use super::schema::users::dsl::*;
@@ -110,7 +106,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_add_token() {
+    fn test_user_token() {
         let db = DATABASE.lock().unwrap();
 
         db.add_user("gil@heig-vd.ch", "some password", None)

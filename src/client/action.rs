@@ -5,7 +5,6 @@
 //! Client facade
 
 use sodiumoxide::crypto::aead::Key;
-use strum::{Display, EnumIter, EnumString};
 
 use crate::client::hash::compute_password_hash;
 use crate::common::error_message::ErrorMessage;
@@ -13,23 +12,11 @@ use crate::common::protected_registry::{PasswordEntry, Registry};
 use crate::server::endpoint::download;
 use crate::server::endpoint::{authentication, upload};
 
-#[derive(Debug, Clone, Copy, Display, EnumIter, EnumString)]
-pub enum Action {
-    #[strum(to_string = "Read one password")]
-    ReadPassword,
-    #[strum(to_string = "Add a new password")]
-    AddNewPassword,
-    #[strum(to_string = "Edit an existing password")]
-    EditPassword,
-    #[strum(to_string = "Delete an existing password")]
-    DeletePassword,
-}
-
 #[derive(Debug)]
 pub struct Session {
     master_key: Key,
     session_token: String,
-    pub registry: Registry, // TODO should be private
+    pub registry: Registry,
 }
 
 impl Session {

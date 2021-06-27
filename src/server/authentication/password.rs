@@ -89,7 +89,6 @@ pub fn hash(password: &str) -> String {
         )
         .unwrap()
         .to_string()
-    // TODO change parameters
 }
 
 /// Verify password against PHC string using Argon2id
