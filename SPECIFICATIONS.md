@@ -13,7 +13,7 @@
     - role user : read/write on owned files
     - role admin : add and delete users
 - All activities on the server are **logged**
-- Transmission between client and server are made on HTTPS
+- Transmission between client and server are made on HTTPS (Simulated)
 
 Bonus ? :)
 

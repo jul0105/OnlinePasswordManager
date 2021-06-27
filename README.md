@@ -20,7 +20,7 @@ cargo doc --no-deps --open
 
 ## Specification
 
-See `SPECIFICATIONS.md`
+See `SPECIFICATIONS.md` (please open the PDF file if you don't use Typora)
 
 
 
