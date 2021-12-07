@@ -10,10 +10,11 @@ use crate::common::error_message::ErrorMessage;
 use crate::server::authentication::password::hash;
 use crate::server::authentication::token::validate_token;
 use diesel::prelude::*;
-use diesel::RunQueryDsl;
+use diesel::{RunQueryDsl, update};
 use diesel::{insert_into, Connection, QueryResult, SqliteConnection};
 use std::env;
 use khape::{FileEntry, PreRegisterSecrets, EphemeralKeys, OutputKey};
+use serde::Serialize;
 
 pub struct DatabaseConnection {
     pub conn: SqliteConnection,
@@ -33,26 +34,47 @@ impl DatabaseConnection {
         password: &str,
         totp_secret: Option<&str>,
     ) -> QueryResult<usize> {
+        unimplemented!();
+        // let new_user = NewUser {
+        //     email,
+        //     password_hash: &hash(password),
+        //     totp_secret,
+        // };
+        // insert_into(users::table)
+        //     .values(&new_user)
+        //     .execute(&self.conn)
+    }
+
+    pub fn pre_register_user(&self, uid: &str, pre_register_secrets: PreRegisterSecrets) -> QueryResult<usize> {
+        let serialized_value = serde_json::to_string(&pre_register_secrets).unwrap();
+
         let new_user = NewUser {
-            email,
-            password_hash: &hash(password),
-            totp_secret,
+            email: uid,
+            pre_register_secrets: Some(&serialized_value),
+            totp_secret: None
         };
+        // pre register user (incomplete, can be overridden)
         insert_into(users::table)
             .values(&new_user)
+            .execute(&self.conn) // TODO override if incomplete register
+    }
+
+    pub fn finish_register_user(&self, uid: &str, file_entry: FileEntry) -> QueryResult<usize> {
+        let serialized_value = serde_json::to_string(&file_entry).unwrap();
+
+        // finish register user (complete, cannot be overridden)
+        update(users::table.filter(users::email.eq(uid)))
+            .set((users::file_entry.eq(serialized_value), users::pre_register_secrets.eq::<Option<String>>(None)))
             .execute(&self.conn)
     }
 
-    pub fn pre_register_user(&self, uid: &str, pre_register_secrets: PreRegisterSecrets) {
-        // pre register user (incomplete, can be overridden)
-    }
+    pub fn user_add_ephemeral_keys(&self, uid: &str, ephemeral_keys: EphemeralKeys) -> QueryResult<usize> {
+        let serialized_value = serde_json::to_string(&ephemeral_keys).unwrap();
 
-    pub fn finish_register_user(&self, uid: &str, file_entry: FileEntry) {
-        // finish register user (complete, cannot be overridden)
-    }
-
-    pub fn user_add_ephemeral_keys(&self, uid: &str, ephemeral_keys: EphemeralKeys) {
         // add ephemeral keys
+        update(users::table.filter(users::email.eq(uid)))
+            .set(users::ephemeral_keys.eq(serialized_value))
+            .execute(&self.conn)
     }
 
     pub fn user_add_session_key(&self, uid: &str, output_key: OutputKey) {
@@ -60,12 +82,25 @@ impl DatabaseConnection {
         // add session key
     }
 
-    pub fn user_get_file_entry(&self, uid: &str) -> FileEntry {
-
+    pub fn user_get_file_entry(&self, uid: &str) -> Option<FileEntry> {
+        match self.get_user(uid).unwrap().file_entry { // TODO handle unwrap
+            None => None,
+            Some(val) => Some(serde_json::from_str::<FileEntry>(&val).unwrap()),
+        }
     }
 
-    pub fn user_get_ephemeral_keys(&self, uid: &str) -> EphemeralKeys {
+    pub fn user_get_pre_register_secrets(&self, uid: &str) -> Option<PreRegisterSecrets> {
+        match self.get_user(uid).unwrap().pre_register_secrets { // TODO handle unwrap
+            None => None,
+            Some(val) => Some(serde_json::from_str::<PreRegisterSecrets>(&val).unwrap()),
+        }
+    }
 
+    pub fn user_get_ephemeral_keys(&self, uid: &str) -> Option<EphemeralKeys> {
+        match self.get_user(uid).unwrap().ephemeral_keys { // TODO handle unwrap
+            None => None,
+            Some(val) => Some(serde_json::from_str::<EphemeralKeys>(&val).unwrap()),
+        }
     }
 
     pub fn get_user(&self, user_email: &str) -> QueryResult<User> {

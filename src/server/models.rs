@@ -13,7 +13,9 @@ use crate::server::schema::*;
 pub struct User {
     pub id: i32,
     pub email: String,
-    pub password_hash: String,
+    pub file_entry: Option<String>,
+    pub pre_register_secrets: Option<String>,
+    pub ephemeral_keys: Option<String>,
     pub role: String,
     pub totp_secret: Option<String>,
 }
@@ -22,7 +24,7 @@ pub struct User {
 #[table_name = "users"]
 pub struct NewUser<'a> {
     pub email: &'a str,
-    pub password_hash: &'a str,
+    pub pre_register_secrets: Option<&'a str>,
     pub totp_secret: Option<&'a str>,
 }
 

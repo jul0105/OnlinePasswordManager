@@ -1,9 +1,3 @@
-// SEC : Labo project - Authentication
-// Author : Julien Béguin & Gil Balsiger
-// Date : 26.06.2021
-//
-//! Diesel DB macro
-
 table! {
     tokens (token) {
         token -> Text,
@@ -17,7 +11,9 @@ table! {
     users (id) {
         id -> Integer,
         email -> Text,
-        password_hash -> Text,
+        file_entry -> Nullable<Text>,
+        pre_register_secrets -> Nullable<Text>,
+        ephemeral_keys -> Nullable<Text>,
         role -> Text,
         totp_secret -> Nullable<Text>,
     }
