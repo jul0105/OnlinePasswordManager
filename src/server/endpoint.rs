@@ -21,6 +21,7 @@ use crate::common::protected_registry::ProtectedRegistry;
 
 use super::repository::DatabaseConnection;
 use khape::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, RegisterRequest, RegisterResponse, RegisterFinish, Server, Parameters};
+use crate::server::authentication::token::generate_token_from_key;
 
 fn authenticate(
     db: &DatabaseConnection,
@@ -127,7 +128,10 @@ pub fn login_khape_finish(auth_verify_request: AuthVerifyRequest) -> AuthVerifyR
 
     let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys.unwrap(), &file_entry.unwrap());
     if server_output_key.is_some() {
-        db.user_add_session_key(&uid, server_output_key.unwrap()); // remove ephemeral key
+        let session_key = base64::encode(server_output_key.unwrap());
+        let user = db.get_user(&uid).unwrap(); // TODO handle unwrap
+        let session_token = token::generate_token_from_key(user.id, session_key);
+        db.user_add_session_key(&uid, &session_token); // remove ephemeral key
     }
     auth_verify_response
 }
@@ -157,10 +161,10 @@ pub fn register_khape_finish(register_finish: RegisterFinish) {
 /// Download user's encrypted password file
 ///
 /// Return encrypted file if session token is valid and user has permission to read the file. ErrorMessage otherwise
-pub fn download(session_token: &str) -> Result<ProtectedRegistry, ErrorMessage> {
+pub fn download(session_key: &str) -> Result<ProtectedRegistry, ErrorMessage> {
     let db = DatabaseConnection::new();
 
-    match db.get_user_from_token(session_token) {
+    match db.get_user_from_token(session_key) {
         Ok(user) => {
             info!("User {} authenticated successfully on the server with session token during download procedure.", user.email);
             match File::open(
@@ -207,12 +211,12 @@ pub fn download(session_token: &str) -> Result<ProtectedRegistry, ErrorMessage> 
 ///
 /// Return Ok if upload successful. ErrorMessage otherwise
 pub fn upload(
-    session_token: &str,
+    session_key: &str,
     protected_registry: ProtectedRegistry,
 ) -> Result<(), ErrorMessage> {
     let db = DatabaseConnection::new();
 
-    match db.get_user_from_token(session_token) {
+    match db.get_user_from_token(session_key) {
         Ok(user) => {
             info!("User {} authenticated successfully on the server with session token during upload procedure.", user.email);
             store_protected_registry(

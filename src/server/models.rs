@@ -31,7 +31,7 @@ pub struct NewUser<'a> {
 #[derive(Queryable, Insertable, Debug, Clone, PartialEq)]
 #[table_name = "tokens"]
 pub struct Token {
-    pub token: String,
+    pub session_key: String,
     pub validity_start: NaiveDateTime,
     pub validity_end: NaiveDateTime,
     pub user_id: i32,

@@ -16,7 +16,7 @@ use crate::server::endpoint::{authentication, upload};
 #[derive(Debug)]
 pub struct Session {
     master_key: Key,
-    session_token: String,
+    session_key: String,
     pub registry: Registry,
 }
 
@@ -31,11 +31,13 @@ impl Session {
         totp_code: Option<&str>,
     ) -> Result<Session, ErrorMessage> {
         let auth = compute_password_hash(email, password);
-        let session_token = authentication(email, &auth.server_auth_password, totp_code)?;
+        // let session_token = authentication(email, &auth.server_auth_password, totp_code)?; // TODO totp
+        let session_key = Session::login_khape(email, &auth.server_auth_password).unwrap();
+        let session_token = base64::encode(session_key);
         let protected_registry = download(&session_token)?;
         let registry = protected_registry.decrypt(&auth.encryption_key)?;
         Ok(Session {
-            session_token,
+            session_key: session_token,
             master_key: auth.encryption_key,
             registry,
         })
@@ -119,7 +121,7 @@ impl Session {
     /// Return server's error if upload fail or Ok if successful
     fn seal_and_send(&self) -> Result<(), ErrorMessage> {
         let protected_registry = self.registry.encrypt(&self.master_key);
-        upload(&self.session_token, protected_registry)?;
+        upload(&self.session_key, protected_registry)?;
         Ok(())
     }
 }

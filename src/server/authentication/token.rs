@@ -20,24 +20,29 @@ const TOKEN_LENGTH: usize = 64;
 ///
 /// Return Token struct
 pub fn generate_token(user_id: i32) -> Token {
-    // Validity date
-    let validity_start = Utc::now().naive_utc();
-    let validity_end = validity_start + Duration::seconds(VALIDITY_DURATION);
-
     // Generate random token
-    let token: String = thread_rng()
+    let session_key: String = thread_rng()
         .sample_iter(&Alphanumeric)
         .take(TOKEN_LENGTH)
         .map(char::from)
         .collect();
 
+    generate_token_from_key(user_id, session_key)
+}
+
+pub fn generate_token_from_key(user_id: i32, session_key: String) -> Token {
+    // Validity date
+    let validity_start = Utc::now().naive_utc();
+    let validity_end = validity_start + Duration::seconds(VALIDITY_DURATION);
+
     Token {
-        token,
+        session_key,
         validity_start,
         validity_end,
         user_id,
     }
 }
+
 
 pub fn validate_token(token: &Token) -> Result<(), ErrorMessage> {
     let now = Utc::now().naive_utc();
@@ -56,7 +61,7 @@ mod tests {
     #[test]
     fn test_generate_token() {
         let token = generate_token(0);
-        assert!(token.token.len() > 24);
+        assert!(token.session_key.len() > 24);
         assert_eq!(
             token.validity_start + Duration::seconds(VALIDITY_DURATION),
             token.validity_end
@@ -81,7 +86,7 @@ mod tests {
     #[test]
     fn test_validate_invalid_token() {
         let token = Token {
-            token: String::new(),
+            session_key: String::new(),
             validity_start: Utc::now().naive_utc() - Duration::days(7),
             validity_end: Utc::now().naive_utc() - Duration::days(5),
             user_id: 0,
@@ -92,7 +97,7 @@ mod tests {
     #[test]
     fn test_validate_invalid_token2() {
         let token = Token {
-            token: String::new(),
+            session_key: String::new(),
             validity_start: Utc::now().naive_utc() + Duration::days(7),
             validity_end: Utc::now().naive_utc() + Duration::days(5),
             user_id: 0,

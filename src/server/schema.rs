@@ -1,6 +1,6 @@
 table! {
-    tokens (token) {
-        token -> Text,
+    tokens (session_key) {
+        session_key -> Text,
         validity_start -> Timestamp,
         validity_end -> Timestamp,
         user_id -> Integer,

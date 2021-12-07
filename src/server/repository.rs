@@ -77,9 +77,14 @@ impl DatabaseConnection {
             .execute(&self.conn)
     }
 
-    pub fn user_add_session_key(&self, uid: &str, output_key: OutputKey) {
+    pub fn user_add_session_key(&self, uid: &str, session_token: &Token) -> QueryResult<usize> {
         // remove ephemeral keys
+        update(users::table.filter(users::email.eq(uid)))
+            .set(users::ephemeral_keys.eq::<Option<String>>(None))
+            .execute(&self.conn);
+
         // add session key
+        self.add_token(session_token)
     }
 
     pub fn user_get_file_entry(&self, uid: &str) -> Option<FileEntry> {
@@ -120,7 +125,7 @@ impl DatabaseConnection {
         use super::schema::users::dsl::*;
         match users
             .inner_join(tokens)
-            .filter(token.eq(given_token))
+            .filter(session_key.eq(given_token))
             .first::<(User, Token)>(&self.conn)
         {
             Ok((user_found, token_found)) => {
@@ -176,7 +181,7 @@ pub mod tests {
         let token = token::generate_token(user_id);
         let result = db.add_token(&token);
         assert!(result.is_ok());
-        let user = db.get_user_from_token(&token.token);
+        let user = db.get_user_from_token(&token.session_key);
         assert!(user.is_ok(), "{:?}", user);
         assert_eq!(user_id, user.unwrap().id);
     }
