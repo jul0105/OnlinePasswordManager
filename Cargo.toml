@@ -6,7 +6,13 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[patch.crates-io]
+curve25519-dalek = { path = "../07-curve25519-dalek-fork" }
+
+
 [dependencies]
+khape = { version = "0.1.0", path = "../06-khape-implementation"}
+
 rand = "0.8.3"
 dotenv = "0.15.0"
 structopt = "0.3.21"

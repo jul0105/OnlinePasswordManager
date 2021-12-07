@@ -5,11 +5,12 @@
 //! Client facade
 
 use sodiumoxide::crypto::aead::Key;
+use khape::{Client, Parameters};
 
 use crate::client::hash::compute_password_hash;
 use crate::common::error_message::ErrorMessage;
 use crate::common::protected_registry::{PasswordEntry, Registry};
-use crate::server::endpoint::download;
+use crate::server::endpoint::{download, login_khape_start, login_khape_finish, register_khape_finish, register_khape_start};
 use crate::server::endpoint::{authentication, upload};
 
 #[derive(Debug)]
@@ -38,6 +39,29 @@ impl Session {
             master_key: auth.encryption_key,
             registry,
         })
+    }
+
+    fn login_khape(email: &str, password: &str) -> Option<[u8; 32]> {
+        let params = Parameters::default();
+        let client = Client::new(params, String::from(email));
+
+        let (auth_request, oprf_client_state) = client.auth_start(password.as_ref());
+        let auth_response = login_khape_start(auth_request);
+        let (auth_verify_request, ke_output) = client.auth_ke(auth_response, oprf_client_state);
+        let auth_verify_response = login_khape_finish(auth_verify_request);
+        let output_key = client.auth_finish(auth_verify_response, ke_output);
+
+        output_key
+    }
+
+    fn register_khape(email: &str, password: &str) {
+        let params = Parameters::default();
+        let client = Client::new(params, String::from(email));
+
+        let (register_request, oprf_client_state) = client.register_start(password.as_ref());
+        let register_response = register_khape_start(register_request);
+        let register_finish = client.register_finish(register_response, oprf_client_state);
+        register_khape_finish(register_finish);
     }
 
     /// Add a new password to the password manager.

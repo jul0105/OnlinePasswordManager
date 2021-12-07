@@ -20,6 +20,7 @@ use std::path::Path;
 use crate::common::protected_registry::ProtectedRegistry;
 
 use super::repository::DatabaseConnection;
+use khape::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, RegisterRequest, RegisterResponse, RegisterFinish, Server, Parameters};
 
 fn authenticate(
     db: &DatabaseConnection,
@@ -96,6 +97,43 @@ pub fn authentication(
     totp_code: Option<&str>,
 ) -> Result<String, ErrorMessage> {
     authenticate(&DatabaseConnection::new(), email, password, totp_code)
+}
+
+pub fn login_khape_start(auth_request: AuthRequest) -> AuthResponse {
+    let db = DatabaseConnection::new();
+    let server = Server::new(Parameters::default());
+
+    let file_entry = db.user_get_file_entry(auth_request.uid);
+
+    let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
+    db.user_add_ephemeral_keys(server_ephemeral_keys);
+    auth_response
+}
+
+pub fn login_khape_finish(auth_verify_request: AuthVerifyRequest) -> AuthVerifyResponse {
+    let server = Server::new(Parameters::default());
+
+    let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
+    user_add_session_key(server_output_key); // remove ephemeral key
+    auth_verify_response
+}
+
+pub fn register_khape_start(register_request: RegisterRequest) -> RegisterResponse {
+    let server = Server::new(Parameters::default());
+
+    let (register_response, pre_register_secrets) = server.register_start(register_request);
+    pre_register_user();
+    register_response
+}
+
+pub fn register_khape_finish(register_finish: RegisterFinish) {
+    let server = Server::new(Parameters::default());
+
+    let pre_register_secrets = db.get_pre_register_secrets();
+
+    let file_entry = server.register_finish(register_finish, pre_register_secrets);
+
+    db.insert_file_entry(file_entry);
 }
 
 /// Download user's encrypted password file
