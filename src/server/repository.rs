@@ -13,6 +13,7 @@ use diesel::prelude::*;
 use diesel::RunQueryDsl;
 use diesel::{insert_into, Connection, QueryResult, SqliteConnection};
 use std::env;
+use khape::{FileEntry, PreRegisterSecrets, EphemeralKeys, OutputKey};
 
 pub struct DatabaseConnection {
     pub conn: SqliteConnection,
@@ -40,6 +41,31 @@ impl DatabaseConnection {
         insert_into(users::table)
             .values(&new_user)
             .execute(&self.conn)
+    }
+
+    pub fn pre_register_user(&self, uid: &str, pre_register_secrets: PreRegisterSecrets) {
+        // pre register user (incomplete, can be overridden)
+    }
+
+    pub fn finish_register_user(&self, uid: &str, file_entry: FileEntry) {
+        // finish register user (complete, cannot be overridden)
+    }
+
+    pub fn user_add_ephemeral_keys(&self, uid: &str, ephemeral_keys: EphemeralKeys) {
+        // add ephemeral keys
+    }
+
+    pub fn user_add_session_key(&self, uid: &str, output_key: OutputKey) {
+        // remove ephemeral keys
+        // add session key
+    }
+
+    pub fn user_get_file_entry(&self, uid: &str) -> FileEntry {
+
+    }
+
+    pub fn user_get_ephemeral_keys(&self, uid: &str) -> EphemeralKeys {
+
     }
 
     pub fn get_user(&self, user_email: &str) -> QueryResult<User> {
