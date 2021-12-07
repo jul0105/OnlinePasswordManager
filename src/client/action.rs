@@ -10,8 +10,7 @@ use khape::{Client, Parameters};
 use crate::client::hash::compute_password_hash;
 use crate::common::error_message::ErrorMessage;
 use crate::common::protected_registry::{PasswordEntry, Registry};
-use crate::server::endpoint::{download, login_khape_start, login_khape_finish, register_khape_finish, register_khape_start};
-use crate::server::endpoint::{authentication, upload};
+use crate::server::endpoint::{download,  upload, login_khape_start, login_khape_finish, register_khape_finish, register_khape_start};
 
 #[derive(Debug)]
 pub struct Session {
@@ -32,7 +31,7 @@ impl Session {
     ) -> Result<Session, ErrorMessage> {
         let auth = compute_password_hash(email, password);
         // let session_token = authentication(email, &auth.server_auth_password, totp_code)?; // TODO totp
-        let session_key = Session::login_khape(email, &auth.server_auth_password).unwrap();
+        let session_key = Session::login_khape(email, password).unwrap();
         let session_token = base64::encode(session_key);
         let protected_registry = download(&session_token)?;
         let registry = protected_registry.decrypt(&auth.encryption_key)?;
@@ -131,6 +130,19 @@ mod tests {
 
     use super::*;
     use crate::server::repository::tests::DATABASE;
+
+    #[test]
+    fn test_register_login() {
+        let db = DATABASE.lock().unwrap();
+        let email = "daiwudaiuwdhaiuwdh";
+        let password = "daindwiuniun1u2i3n1j";
+        Session::register_khape(email, password);
+        println!("REGISTER FINISHED");
+        let session = Session::login(email, password, None);
+
+        println!("{:?}", session);
+        println!("{:?}", session.unwrap());
+    }
 
     #[test]
     fn test_login() {
