@@ -31,7 +31,7 @@ impl Session {
     ) -> Result<Session, ErrorMessage> {
         let auth = compute_password_hash(email, password);
         // let session_token = authentication(email, &auth.server_auth_password, totp_code)?; // TODO totp
-        let session_key = Session::login_khape(email, password).unwrap();
+        let session_key = Session::login_khape(email, password)?;
         let session_token = base64::encode(session_key);
         let protected_registry = download(&session_token)?;
         let registry = protected_registry.decrypt(&auth.encryption_key)?;
@@ -42,27 +42,31 @@ impl Session {
         })
     }
 
-    fn login_khape(email: &str, password: &str) -> Option<[u8; 32]> {
+    fn login_khape(email: &str, password: &str) -> Result<[u8; 32], ErrorMessage> {
         let params = Parameters::default();
         let client = Client::new(params, String::from(email));
 
         let (auth_request, oprf_client_state) = client.auth_start(password.as_ref());
-        let auth_response = login_khape_start(auth_request);
+        let auth_response = login_khape_start(auth_request)?;
         let (auth_verify_request, ke_output) = client.auth_ke(auth_response, oprf_client_state);
-        let auth_verify_response = login_khape_finish(auth_verify_request);
-        let output_key = client.auth_finish(auth_verify_response, ke_output);
+        let auth_verify_response = login_khape_finish(auth_verify_request)?;
 
-        output_key
+        match client.auth_finish(auth_verify_response, ke_output) {
+            None => Err(ErrorMessage::AuthFailed),
+            Some(output_key) => Ok(output_key)
+        }
     }
 
-    fn register_khape(email: &str, password: &str) {
+    fn register_khape(email: &str, password: &str) -> Result<(), ErrorMessage> {
         let params = Parameters::default();
         let client = Client::new(params, String::from(email));
 
         let (register_request, oprf_client_state) = client.register_start(password.as_ref());
-        let register_response = register_khape_start(register_request);
+        let register_response = register_khape_start(register_request)?;
         let register_finish = client.register_finish(register_response, oprf_client_state);
-        register_khape_finish(register_finish);
+        register_khape_finish(register_finish)?;
+
+        Ok(())
     }
 
     /// Add a new password to the password manager.
@@ -132,16 +136,26 @@ mod tests {
     use crate::server::repository::tests::DATABASE;
 
     #[test]
-    fn test_register_login() {
+    fn test_register_then_login_with_same_password() {
         let db = DATABASE.lock().unwrap();
-        let email = "daiwudaiuwdhaiuwdh";
-        let password = "daindwiuniun1u2i3n1j";
+        let email = "test1@demo.com";
+        let password = "password123";
         Session::register_khape(email, password);
-        println!("REGISTER FINISHED");
         let session = Session::login(email, password, None);
 
-        println!("{:?}", session);
-        println!("{:?}", session.unwrap());
+        assert!(session.is_ok());
+    }
+
+    #[test]
+    fn test_register_then_login_with_different_password() {
+        let db = DATABASE.lock().unwrap();
+        let email = "test2@demo.com";
+        let password1 = "password123";
+        let password2 = "qwertz";
+        Session::register_khape(email, password1);
+        let session = Session::login(email, password2, None);
+
+        assert!(session.is_err());
     }
 
     #[test]

@@ -105,57 +105,59 @@ pub fn authentication(
     authenticate(&DatabaseConnection::new(), email, password, totp_code)
 }
 
-pub fn login_khape_start(auth_request: AuthRequest) -> AuthResponse {
+pub fn login_khape_start(auth_request: AuthRequest) -> Result<AuthResponse, ErrorMessage> {
     let db = DatabaseConnection::new();
     let server = Server::new(Parameters::default());
     let uid = auth_request.uid.clone();
 
-    let file_entry = db.user_get_file_entry(&uid);
+    let file_entry = db.user_get_file_entry(&uid)?;
 
-    let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry.unwrap());
+    let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
     db.user_add_ephemeral_keys(&uid, server_ephemeral_keys);
-    auth_response
+    Ok(auth_response)
 }
 
-pub fn login_khape_finish(auth_verify_request: AuthVerifyRequest) -> AuthVerifyResponse {
+pub fn login_khape_finish(auth_verify_request: AuthVerifyRequest) -> Result<AuthVerifyResponse, ErrorMessage> {
     let db = DatabaseConnection::new();
     let server = Server::new(Parameters::default());
     let uid = auth_verify_request.uid.clone();
 
 
-    let server_ephemeral_keys = db.user_get_ephemeral_keys(&uid);
-    let file_entry = db.user_get_file_entry(&uid);
+    let server_ephemeral_keys = db.user_get_ephemeral_keys(&uid)?;
+    let file_entry = db.user_get_file_entry(&uid)?;
 
-    let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys.unwrap(), &file_entry.unwrap());
+    let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
     if server_output_key.is_some() {
         let session_key = base64::encode(server_output_key.unwrap());
-        let user = db.get_user(&uid).unwrap(); // TODO handle unwrap
+        let user = db.get_user(&uid)?;
         let session_token = token::generate_token_from_key(user.id, session_key);
-        db.user_add_session_key(&uid, &session_token); // remove ephemeral key
+        db.user_add_session_key(&uid, &session_token);
     }
-    auth_verify_response
+    Ok(auth_verify_response)
 }
 
-pub fn register_khape_start(register_request: RegisterRequest) -> RegisterResponse {
+pub fn register_khape_start(register_request: RegisterRequest) -> Result<RegisterResponse, ErrorMessage> {
     let db = DatabaseConnection::new();
     let server = Server::new(Parameters::default());
     let uid = register_request.uid.clone();
 
     let (register_response, pre_register_secrets) = server.register_start(register_request);
     db.pre_register_user(&uid, pre_register_secrets);
-    register_response
+    Ok(register_response)
 }
 
-pub fn register_khape_finish(register_finish: RegisterFinish) {
+pub fn register_khape_finish(register_finish: RegisterFinish) -> Result<(), ErrorMessage> {
     let db = DatabaseConnection::new();
     let server = Server::new(Parameters::default());
     let uid = register_finish.uid.clone();
 
-    let pre_register_secrets = db.user_get_pre_register_secrets(&uid);
+    let pre_register_secrets = db.user_get_pre_register_secrets(&uid)?;
 
-    let file_entry = server.register_finish(register_finish, pre_register_secrets.unwrap());
+    let file_entry = server.register_finish(register_finish, pre_register_secrets);
 
     db.finish_register_user(&uid, file_entry);
+
+    Ok(())
 }
 
 /// Download user's encrypted password file

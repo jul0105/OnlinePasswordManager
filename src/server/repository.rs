@@ -15,6 +15,7 @@ use diesel::{insert_into, Connection, QueryResult, SqliteConnection};
 use std::env;
 use khape::{FileEntry, PreRegisterSecrets, EphemeralKeys, OutputKey};
 use serde::Serialize;
+use diesel::result::Error;
 
 pub struct DatabaseConnection {
     pub conn: SqliteConnection,
@@ -87,31 +88,43 @@ impl DatabaseConnection {
         self.add_token(session_token)
     }
 
-    pub fn user_get_file_entry(&self, uid: &str) -> Option<FileEntry> {
-        match self.get_user(uid).unwrap().file_entry { // TODO handle unwrap
-            None => None,
-            Some(val) => Some(serde_json::from_str::<FileEntry>(&val).unwrap()),
+    pub fn user_get_file_entry(&self, uid: &str) -> Result<FileEntry, ErrorMessage> {
+        match self.get_user(uid)?.file_entry {
+            Some(serialized_val) => match serde_json::from_str::<FileEntry>(&serialized_val) {
+                Ok(val) => Ok(val),
+                Err(_) => Err(ErrorMessage::DeserializeError)
+            }
+            None => Err(ErrorMessage::ServerSideError)
         }
     }
 
-    pub fn user_get_pre_register_secrets(&self, uid: &str) -> Option<PreRegisterSecrets> {
-        match self.get_user(uid).unwrap().pre_register_secrets { // TODO handle unwrap
-            None => None,
-            Some(val) => Some(serde_json::from_str::<PreRegisterSecrets>(&val).unwrap()),
+    pub fn user_get_pre_register_secrets(&self, uid: &str) -> Result<PreRegisterSecrets, ErrorMessage> {
+        match self.get_user(uid)?.pre_register_secrets {
+            Some(serialized_val) => match serde_json::from_str::<PreRegisterSecrets>(&serialized_val) {
+                Ok(val) => Ok(val),
+                Err(_) => Err(ErrorMessage::DeserializeError)
+            }
+            None => Err(ErrorMessage::ServerSideError)
         }
     }
 
-    pub fn user_get_ephemeral_keys(&self, uid: &str) -> Option<EphemeralKeys> {
-        match self.get_user(uid).unwrap().ephemeral_keys { // TODO handle unwrap
-            None => None,
-            Some(val) => Some(serde_json::from_str::<EphemeralKeys>(&val).unwrap()),
+    pub fn user_get_ephemeral_keys(&self, uid: &str) -> Result<EphemeralKeys, ErrorMessage> {
+        match self.get_user(uid)?.ephemeral_keys {
+            Some(serialized_val) => match serde_json::from_str::<EphemeralKeys>(&serialized_val) {
+                Ok(val) => Ok(val),
+                Err(_) => Err(ErrorMessage::DeserializeError)
+            }
+            None => Err(ErrorMessage::ServerSideError)
         }
     }
 
-    pub fn get_user(&self, user_email: &str) -> QueryResult<User> {
+    pub fn get_user(&self, user_email: &str) -> Result<User, ErrorMessage> {
         use super::schema::users::dsl::*;
 
-        users.filter(email.eq(user_email)).first::<User>(&self.conn)
+        match users.filter(email.eq(user_email)).first::<User>(&self.conn) {
+            Ok(val) => Ok(val),
+            Err(_) => Err(ErrorMessage::AuthFailed)
+        }
     }
 
     pub fn add_token(&self, new_token: &Token) -> QueryResult<usize> {
