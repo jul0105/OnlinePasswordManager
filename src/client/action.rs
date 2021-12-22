@@ -5,7 +5,7 @@
 //! Client facade
 
 use sodiumoxide::crypto::aead::Key;
-use khape::{Client, Parameters};
+use khape::{Client, Parameters, ExportKey, OutputKey};
 
 use crate::client::hash::compute_password_hash;
 use crate::common::error_message::ErrorMessage;
@@ -29,31 +29,31 @@ impl Session {
         password: &str,
         totp_code: Option<&str>,
     ) -> Result<Session, ErrorMessage> {
-        let auth = compute_password_hash(email, password);
         // let session_token = authentication(email, &auth.server_auth_password, totp_code)?; // TODO totp
-        let session_key = Session::login_khape(email, password)?;
+        let (session_key, export_key) = Session::login_khape(email, password)?;
+        let master_key = Key::from_slice(&export_key).unwrap();
         let session_token = base64::encode(session_key);
         let protected_registry = download(&session_token)?;
-        let registry = protected_registry.decrypt(&auth.encryption_key)?;
+        let registry = protected_registry.decrypt(&master_key)?;
         Ok(Session {
             session_key: session_token,
-            master_key: auth.encryption_key,
+            master_key,
             registry,
         })
     }
 
-    fn login_khape(email: &str, password: &str) -> Result<[u8; 32], ErrorMessage> {
+    fn login_khape(email: &str, password: &str) -> Result<(OutputKey, ExportKey), ErrorMessage> {
         let params = Parameters::default();
         let client = Client::new(params, String::from(email));
 
         let (auth_request, oprf_client_state) = client.auth_start(password.as_ref());
         let auth_response = login_khape_start(auth_request)?;
-        let (auth_verify_request, ke_output) = client.auth_ke(auth_response, oprf_client_state);
+        let (auth_verify_request, ke_output, export_key) = client.auth_ke(auth_response, oprf_client_state);
         let auth_verify_response = login_khape_finish(auth_verify_request)?;
 
         match client.auth_finish(auth_verify_response, ke_output) {
             None => Err(ErrorMessage::AuthFailed),
-            Some(output_key) => Ok(output_key)
+            Some(output_key) => Ok((output_key, export_key))
         }
     }
 
@@ -63,7 +63,7 @@ impl Session {
 
         let (register_request, oprf_client_state) = client.register_start(password.as_ref());
         let register_response = register_khape_start(register_request)?;
-        let register_finish = client.register_finish(register_response, oprf_client_state);
+        let (register_finish, _) = client.register_finish(register_response, oprf_client_state);
         register_khape_finish(register_finish)?;
 
         Ok(())
