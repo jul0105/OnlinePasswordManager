@@ -344,12 +344,8 @@ fn handle_registration() {
         None
     };
 
-    match register_new_user(
-        &email,
-        &compute_password_hash(&email, &password).server_auth_password,
-        totp_secret.as_deref(),
-    ) {
-        Ok(m) => println!("{}", style(m).green()),
-        Err(m) => println!("{}", style(m).red()),
+    match Session::register_khape(&email, &password) {
+        Ok(_) => println!("{}", style("Registration successful").green()),
+        Err(e) => display_error(e),
     }
 }

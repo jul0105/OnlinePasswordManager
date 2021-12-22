@@ -57,7 +57,7 @@ impl Session {
         }
     }
 
-    fn register_khape(email: &str, password: &str) -> Result<(), ErrorMessage> {
+    pub fn register_khape(email: &str, password: &str) -> Result<(), ErrorMessage> {
         let params = Parameters::default();
         let client = Client::new(params, String::from(email));
 
