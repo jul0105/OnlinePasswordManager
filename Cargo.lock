@@ -240,6 +240,7 @@ dependencies = [
 [[package]]
 name = "curve25519-dalek"
 version = "3.2.0"
+source = "git+https://github.com/jul0105/curve25519-dalek.git#b1d7eb368327f0bc99ef4c18bd125c4928108352"
 dependencies = [
  "byteorder",
  "digest",
@@ -551,6 +552,7 @@ checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 [[package]]
 name = "khape"
 version = "0.1.0"
+source = "git+https://github.com/jul0105/KHAPE.git#7b5f90d75b75200cfaa2136251b2a31ec1dfc529"
 dependencies = [
  "argon2 0.3.1",
  "curve25519-dalek",
