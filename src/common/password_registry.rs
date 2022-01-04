@@ -187,7 +187,16 @@ impl ProtectedEnvelope {
         let external_encryption_key = Key::from_slice(&eek).unwrap();
 
         // Decrypt password registry with external encryption key
-        let registry = self.encrypted_password_registry.decrypt(&external_encryption_key)?;
+
+        let registry = match self.encrypted_password_registry.ciphertext.is_empty() {
+            true => {
+                IndexablePasswordRegistry {
+                    entries: Vec::new(),
+                    nonce: self.encrypted_password_registry.nonce
+                }
+            },
+            false => self.encrypted_password_registry.decrypt(&external_encryption_key)?,
+        };
 
         Ok(OpenedEnvelope {
             encrypted_master_key: self.encrypted_master_key.clone(),
@@ -250,5 +259,35 @@ impl PasswordEntry {
         let password = self.encrypted_password.decrypt(&individual_password_key)?;
 
         Ok(password.password)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_encrypt_decrypt_envelope() {
+        let export_key = gen_key();
+
+        let mut protected_envelope = ProtectedEnvelope::new();
+        protected_envelope.initialize(&export_key);
+
+        let envelope = protected_envelope.open(&export_key);
+
+        println!("{:?}", envelope);
+        assert!(envelope.is_ok());
+
+        let en = envelope.unwrap();
+        let protected_envelope2 = en.clone().seal();
+
+        // assert_eq!(protected_envelope, protected_envelope2)
+
+        let envelope2 = protected_envelope2.open(&export_key);
+
+        println!("{:?}", envelope2);
+        assert!(envelope2.is_ok());
+        assert_eq!(en, envelope2.unwrap())
     }
 }
