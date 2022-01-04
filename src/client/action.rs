@@ -9,14 +9,13 @@ use khape::{Client, Parameters, ExportKey, OutputKey};
 
 use crate::client::hash::compute_password_hash;
 use crate::common::error_message::ErrorMessage;
-use crate::common::protected_registry::{PasswordEntry, Registry};
 use crate::server::endpoint::{download,  upload, login_khape_start, login_khape_finish, register_khape_finish, register_khape_start};
+use crate::common::password_registry::{OpenedEnvelope, PasswordEntry};
 
 #[derive(Debug)]
 pub struct Session {
-    master_key: Key,
     session_key: String,
-    pub registry: Registry,
+    pub envelope: OpenedEnvelope,
 }
 
 impl Session {
@@ -29,16 +28,21 @@ impl Session {
         password: &str,
         totp_code: Option<&str>,
     ) -> Result<Session, ErrorMessage> {
-        // let session_token = authentication(email, &auth.server_auth_password, totp_code)?; // TODO totp
-        let (session_key, export_key) = Session::login_khape(email, password)?;
-        let master_key = Key::from_slice(&export_key).unwrap();
+        let (session_key, ek) = Session::login_khape(email, password)?;
         let session_token = base64::encode(session_key);
-        let protected_registry = download(&session_token)?;
-        let registry = protected_registry.decrypt(&master_key)?;
+        let export_key = Key::from_slice(ek.as_ref()).unwrap(); // TODO
+        let mut protected_envelope = download(&session_token)?;
+
+        if protected_envelope.is_empty() {
+            protected_envelope.initialize(&export_key);
+            upload(&session_token, protected_envelope.clone())?;
+        }
+
+        let envelope = protected_envelope.open(&export_key)?;
+
         Ok(Session {
             session_key: session_token,
-            master_key,
-            registry,
+            envelope,
         })
     }
 
@@ -79,11 +83,12 @@ impl Session {
         username: &str,
         password: &str,
     ) -> Result<(), ErrorMessage> {
-        self.registry.entries.push(PasswordEntry {
-            label: label.to_owned(),
-            username: username.to_owned(),
-            password: password.to_owned(),
-        });
+        self.envelope.registry.entries.push(PasswordEntry::new(
+            label.to_owned(),
+            username.to_owned(),
+            password.to_owned(),
+            &self.envelope.internal_encryption_key
+        ));
         self.seal_and_send()
     }
 
@@ -93,19 +98,17 @@ impl Session {
     /// Return ErrorMessage if the password cannot be modified. Ok(()) otherwise
     pub fn modify_password(
         &mut self,
-        password_id: usize,
+        index: usize,
         label: &str,
         username: &str,
         password: &str,
     ) -> Result<(), ErrorMessage> {
-        let entry: &mut PasswordEntry = match self.registry.entries.get_mut(password_id) {
-            Some(val) => val,
-            None => return Err(ErrorMessage::PasswordEntryNotFound),
-        };
+        if self.envelope.registry.entries.get(index).is_some() {
+            return Err(ErrorMessage::PasswordEntryNotFound);
+        }
 
-        entry.label = String::from(label);
-        entry.username = String::from(username);
-        entry.password = String::from(password);
+        self.delete_password(index);
+        self.add_password(label, username, password);
         self.seal_and_send()?;
         Ok(())
     }
@@ -115,7 +118,11 @@ impl Session {
     ///
     /// Return ErrorMessage if the password cannot be deleted. Ok(()) otherwise
     pub fn delete_password(&mut self, index: usize) -> Result<(), ErrorMessage> {
-        self.registry.entries.remove(index);
+        if self.envelope.registry.entries.get(index).is_some() {
+            return Err(ErrorMessage::PasswordEntryNotFound);
+        }
+
+        self.envelope.registry.entries.remove(index);
         self.seal_and_send()
     }
 
@@ -123,8 +130,8 @@ impl Session {
     ///
     /// Return server's error if upload fail or Ok if successful
     fn seal_and_send(&self) -> Result<(), ErrorMessage> {
-        let protected_registry = self.registry.encrypt(&self.master_key);
-        upload(&self.session_key, protected_registry)?;
+        let protected_envelope = self.envelope.seal();
+        upload(&self.session_key, protected_envelope)?;
         Ok(())
     }
 }
@@ -212,9 +219,9 @@ mod tests {
         Session::register_khape("test4@demo.com", "password123");
         let mut session = Session::login("test4@demo.com", "password123", None).unwrap();
 
-        assert_eq!(0, session.registry.entries.len());
+        assert_eq!(0, session.envelope.registry.entries.len());
         let res = session.add_password("hello", "demo", "1234");
-        assert_eq!(1, session.registry.entries.len());
+        assert_eq!(1, session.envelope.registry.entries.len());
         assert!(res.is_ok());
     }
 
@@ -225,9 +232,9 @@ mod tests {
         let mut session = Session::login("test5@demo.com", "password123", None).unwrap();
 
         session.add_password("hello", "demo", "1234").unwrap();
-        assert_eq!(1, session.registry.entries.len());
+        assert_eq!(1, session.envelope.registry.entries.len());
         let res = session.delete_password(0);
         assert!(res.is_ok());
-        assert_eq!(0, session.registry.entries.len());
+        assert_eq!(0, session.envelope.registry.entries.len());
     }
 }

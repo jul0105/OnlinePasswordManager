@@ -7,7 +7,6 @@
 use crate::client::action::Session;
 use crate::client::hash::compute_password_hash;
 use crate::common::error_message::ErrorMessage;
-use crate::common::protected_registry::Registry;
 use crate::server::authentication::password::validate;
 use crate::server::authentication::totp::{display_totp, generate_secret, verify_code};
 use crate::server::endpoint::register_new_user;
@@ -23,6 +22,7 @@ use strum::IntoEnumIterator;
 use strum::{Display, EnumIter, EnumString};
 
 use crate::server::authentication::email::{store, validate_email};
+use crate::common::password_registry::IndexablePasswordRegistry;
 
 #[derive(Debug, Clone, Copy, Display, EnumIter, EnumString)]
 enum Action {
@@ -169,7 +169,7 @@ fn handle_action(session: &mut Session, action: Action) {
     }
 }
 
-fn select_password_entry(registry: &Registry) -> Option<usize> {
+fn select_password_entry(registry: &IndexablePasswordRegistry) -> Option<usize> {
     let labels = registry
         .entries
         .iter()
@@ -191,9 +191,22 @@ fn select_password_entry(registry: &Registry) -> Option<usize> {
 }
 
 fn read_password(session: &Session) {
-    let selection = select_password_entry(&session.registry);
+    let selection = select_password_entry(&session.envelope.registry);
     if let Some(index) = selection {
-        println!("\n{}", session.registry.entries[index]);
+        let entry = session.envelope.registry.entries[index].clone();
+
+        match entry.read_password(&session.envelope.internal_encryption_key) {
+            Ok(password) => {
+                println!(
+                    "Label: {}\nUsername: {}\nPassword: {}",
+                    entry.label,
+                    entry.username,
+                    password
+                );
+            },
+            Err(e) => display_error(e),
+        }
+
     }
 }
 
@@ -223,6 +236,7 @@ fn add_new_password(session: &mut Session) {
 
     // Check if the label exists, ask the user in this case
     if session
+        .envelope
         .registry
         .entries
         .iter()
@@ -257,7 +271,7 @@ fn add_new_password(session: &mut Session) {
 }
 
 fn modify_password(session: &mut Session) {
-    let selection = select_password_entry(&session.registry);
+    let selection = select_password_entry(&session.envelope.registry);
     if let Some(index) = selection {
         let label = ask_label();
         let username = ask_username();
@@ -280,7 +294,7 @@ fn modify_password(session: &mut Session) {
 }
 
 fn delete_password(session: &mut Session) {
-    let selection = select_password_entry(&session.registry);
+    let selection = select_password_entry(&session.envelope.registry);
     if let Some(index) = selection {
         match session.delete_password(index) {
             Ok(_) => println!(

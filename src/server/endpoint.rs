@@ -17,11 +17,10 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
-use crate::common::protected_registry::ProtectedRegistry;
-
 use super::repository::DatabaseConnection;
 use khape::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, RegisterRequest, RegisterResponse, RegisterFinish, Server, Parameters};
 use crate::server::authentication::token::generate_token_from_key;
+use crate::common::password_registry::ProtectedEnvelope;
 
 fn authenticate(
     db: &DatabaseConnection,
@@ -163,7 +162,7 @@ pub fn register_khape_finish(register_finish: RegisterFinish) -> Result<(), Erro
 /// Download user's encrypted password file
 ///
 /// Return encrypted file if session token is valid and user has permission to read the file. ErrorMessage otherwise
-pub fn download(session_key: &str) -> Result<ProtectedRegistry, ErrorMessage> {
+pub fn download(session_key: &str) -> Result<ProtectedEnvelope, ErrorMessage> {
     let db = DatabaseConnection::new();
 
     match db.get_user_from_token(session_key) {
@@ -179,25 +178,25 @@ pub fn download(session_key: &str) -> Result<ProtectedRegistry, ErrorMessage> {
                     reader.read_to_end(&mut buffer).unwrap();
                     match bincode::deserialize(&buffer) {
                         Ok(data) => {
-                            info!("User {} successfully downloaded its protected registry from the server.", user.email);
+                            info!("User {} successfully downloaded its protected envelope from the server.", user.email);
                             Ok(data)
                         },
                         Err(_) => {
-                            error!("Deserialization error happened while trying to download user {}'s protected registry from the server.", user.email);
+                            error!("Deserialization error happened while trying to download user {}'s protected envelope from the server.", user.email);
                             Err(ErrorMessage::DeserializeError)
                         },
                     }
                 }
                 Err(_) => {
-                    info!("No protected registry for user {}'s on the server. Creating a new one.", user.email);
-                    // Create empty ProtectedRegistry
-                    let registry = ProtectedRegistry::new();
-                    store_protected_registry(
+                    info!("No protected envelope for user {}'s on the server. Creating a new one.", user.email);
+                    // Create empty ProtectedEnvelope
+                    let registry = ProtectedEnvelope::new();
+                    store_protected_envelope(
                         user.id,
                         &registry,
                         Path::new(&env::var("SERVER_DATA").expect("SERVER_DATA not set")),
                     )?;
-                    info!("New protected registry created on the server for user {}.", user.email);
+                    info!("New protected envelope created on the server for user {}.", user.email);
                     return Ok(registry);
                 }
             }
@@ -214,19 +213,19 @@ pub fn download(session_key: &str) -> Result<ProtectedRegistry, ErrorMessage> {
 /// Return Ok if upload successful. ErrorMessage otherwise
 pub fn upload(
     session_key: &str,
-    protected_registry: ProtectedRegistry,
+    protected_envelope: ProtectedEnvelope,
 ) -> Result<(), ErrorMessage> {
     let db = DatabaseConnection::new();
 
     match db.get_user_from_token(session_key) {
         Ok(user) => {
             info!("User {} authenticated successfully on the server with session token during upload procedure.", user.email);
-            store_protected_registry(
+            store_protected_envelope(
                 user.id,
-                &protected_registry,
+                &protected_envelope,
                 Path::new(&env::var("SERVER_DATA").expect("SERVER_DATA not set")),
             )?;
-            info!("User {} successfully uploaded its protected registry to the server.", user.email);
+            info!("User {} successfully uploaded its protected envelope to the server.", user.email);
             Ok(())
         }
         Err(e) => {
@@ -236,24 +235,24 @@ pub fn upload(
     }
 }
 
-/// Serialize, compress and store the protected registry
-fn store_protected_registry(
+/// Serialize, compress and store the protected envelope
+fn store_protected_envelope(
     user_id: i32,
-    registry: &ProtectedRegistry,
+    protected_envelope: &ProtectedEnvelope,
     folder: &Path,
 ) -> Result<(), ErrorMessage> {
     let new_registry_file = match File::create(folder.join(user_id.to_string())) {
         Ok(val) => val,
         Err(_) => {
-            error!("Unable to create file to store protected registry for userid {} on the server", user_id);
+            error!("Unable to create file to store protected envelope for userid {} on the server", user_id);
             return Err(ErrorMessage::ServerSideError);
         },
     };
 
-    let serialized_registry = match bincode::serialize(&registry) {
+    let serialized_registry = match bincode::serialize(&protected_envelope) {
         Ok(val) => val,
         Err(_) => {
-            error!("Unable to serialize protected registry for userid {} on the server", user_id);
+            error!("Unable to serialize protected envelope for userid {} on the server", user_id);
             return Err(ErrorMessage::ServerSideError);
         },
     };
@@ -261,11 +260,11 @@ fn store_protected_registry(
     let mut writer = DeflateEncoder::new(BufWriter::new(new_registry_file), Compression::default());
 
     if let Err(_) = writer.write_all(&serialized_registry) {
-        error!("Unable to write file to store protected registry for userid {} on the server", user_id);
+        error!("Unable to write file to store protected envelope for userid {} on the server", user_id);
         return Err(ErrorMessage::ServerSideError);
     }
 
-    info!("Successful store of protected registry of userid {} on the server", user_id);
+    info!("Successful store of protected envelope of userid {} on the server", user_id);
     Ok(())
 }
 

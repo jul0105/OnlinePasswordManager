@@ -899,6 +899,7 @@ dependencies = [
  "dotenv",
  "flate2",
  "google-authenticator",
+ "hkdf",
  "khape",
  "lazy_static",
  "log",
