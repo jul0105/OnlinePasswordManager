@@ -103,7 +103,7 @@ impl Session {
         username: &str,
         password: &str,
     ) -> Result<(), ErrorMessage> {
-        if self.envelope.registry.entries.get(index).is_some() {
+        if self.envelope.registry.entries.get(index).is_none() {
             return Err(ErrorMessage::PasswordEntryNotFound);
         }
 
@@ -118,7 +118,7 @@ impl Session {
     ///
     /// Return ErrorMessage if the password cannot be deleted. Ok(()) otherwise
     pub fn delete_password(&mut self, index: usize) -> Result<(), ErrorMessage> {
-        if self.envelope.registry.entries.get(index).is_some() {
+        if self.envelope.registry.entries.get(index).is_none() {
             return Err(ErrorMessage::PasswordEntryNotFound);
         }
 
