@@ -2,3 +2,4 @@
 
 pub mod error_message;
 pub mod protected_registry;
+mod password_registry;
