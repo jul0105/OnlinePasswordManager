@@ -218,7 +218,7 @@ impl OpenedEnvelope {
 }
 
 /// Derive individual password key from internal encryption key and labels
-fn derive_individual_password_key(label: &String, username: &String, internal_encryption_key: &Key) -> Key {
+fn derive_individual_password_key(label: &str, username: &str, internal_encryption_key: &Key) -> Key {
     let mut hkdf_label: Vec<u8> = Vec::new();
     hkdf_label.extend_from_slice(STR_INDIVIDUAL_PASSWORD_KEY);
     hkdf_label.extend_from_slice(label.as_ref());
@@ -288,6 +288,71 @@ mod tests {
 
         println!("{:?}", envelope2);
         assert!(envelope2.is_ok());
-        assert_eq!(en, envelope2.unwrap())
+        assert_eq!(en, envelope2.unwrap());
+    }
+
+    #[test]
+    fn test_encrypt_decrypt_envelope_with_wrong_key() {
+        let export_key1 = gen_key();
+        let export_key2 = gen_key();
+        assert_ne!(export_key1, export_key2);
+
+        let mut protected_envelope = ProtectedEnvelope::new();
+        protected_envelope.initialize(&export_key1);
+
+        let envelope = protected_envelope.open(&export_key1);
+
+        println!("{:?}", envelope);
+        assert!(envelope.is_ok());
+
+        let en = envelope.unwrap();
+        let protected_envelope2 = en.clone().seal();
+
+        // assert_eq!(protected_envelope, protected_envelope2)
+
+        let envelope2 = protected_envelope2.open(&export_key2);
+
+        println!("{:?}", envelope2);
+        assert!(envelope2.is_err());
+    }
+
+    #[test]
+    fn test_encrypt_decrypt_password() {
+        let label = "label";
+        let username = "username";
+        let password = "password";
+        let key = gen_key();
+
+        let password_entry = PasswordEntry::new(String::from(label), String::from(username), String::from(password), &key);
+
+        assert_eq!(password_entry.label, label);
+        assert_eq!(password_entry.username, username);
+        assert_ne!(password_entry.encrypted_password.ciphertext, password.as_bytes());
+
+        let password2 = password_entry.read_password(&key);
+
+        assert!(password2.is_ok());
+        assert_eq!(password, password2.unwrap());
+
+    }
+
+    #[test]
+    fn test_encrypt_decrypt_password_with_wrong_key() {
+        let label = "label";
+        let username = "username";
+        let password = "password";
+        let key1 = gen_key();
+        let key2 = gen_key();
+        assert_ne!(key1, key2);
+
+        let password_entry = PasswordEntry::new(String::from(label), String::from(username), String::from(password), &key1);
+
+        assert_eq!(password_entry.label, label);
+        assert_eq!(password_entry.username, username);
+        assert_ne!(password_entry.encrypted_password.ciphertext, password.as_bytes());
+
+        let password2 = password_entry.read_password(&key2);
+
+        assert!(password2.is_err());
     }
 }
