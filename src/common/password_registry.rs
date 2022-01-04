@@ -11,12 +11,12 @@ pub struct ProtectedEnvelope {
     encrypted_master_key: EncryptedMasterKey,
 }
 
-pub struct EncryptedMasterKey {
+struct EncryptedMasterKey {
     ciphertext: Vec<u8>,
     nonce: Nonce,
 }
 
-pub struct EncryptedPasswordRegistry {
+struct EncryptedPasswordRegistry {
     ciphertext: Vec<u8>,
     nonce: Nonce,
 }
@@ -24,7 +24,7 @@ pub struct EncryptedPasswordRegistry {
 pub struct OpenedEnvelope {
     external_encryption_key: Key,
     internal_encryption_key: Key,
-    pub indexable_password_registry: IndexablePasswordRegistry,
+    pub registry: IndexablePasswordRegistry,
 }
 
 pub struct IndexablePasswordRegistry {
@@ -36,13 +36,14 @@ pub struct IndexablePasswordRegistry {
 pub struct PasswordEntry {
     pub label: String,
     pub username: String,
-    pub encrypted_password: EncryptedPassword,
+    encrypted_password: EncryptedPassword,
 }
 
 pub struct EncryptedPassword {
     ciphertext: Vec<u8>,
     nonce: Nonce,
 }
+
 pub struct Password {
     pub password: String,
     nonce: Nonce,
@@ -50,18 +51,49 @@ pub struct Password {
 
 
 
+impl EncryptedMasterKey {
+    fn decrypt(&self) -> Key {}
+}
+impl EncryptedPasswordRegistry {
+    fn decrypt(&self) -> IndexablePasswordRegistry {}
+}
+impl EncryptedPassword {
+    fn decrypt(&self) -> Password {}
+}
+
+impl IndexablePasswordRegistry {
+    fn encrypt(&self) -> EncryptedPasswordRegistry {}
+}
+impl Password {
+    fn encrypt(&self) -> EncryptedPassword {}
+}
+
+
 
 impl ProtectedEnvelope {
-    pub fn open(&self) -> OpenedEnvelope {}
+    pub fn open(&self) -> OpenedEnvelope {
+        // Decrypt master key
+        // Derive internal and external encryption key
+        // Decrypt password registry with external encryption key
+    }
 }
 
 impl OpenedEnvelope {
-    pub fn seal(&self) -> EncryptedPasswordRegistry {}
+    pub fn seal(&self) -> EncryptedPasswordRegistry {
+        // Encrypt password registry with external encryption key
+    }
 }
 
 
 impl PasswordEntry {
-    pub fn seal(label: String, username: String, password: String, internal_encryption_key: Key) -> PasswordEntry {}
+    pub fn new(label: String, username: String, password: String, internal_encryption_key: Key) -> PasswordEntry {
+        // Derive individual password key from internal encryption key and labels
+        // Encrypt password with individual password key
 
-    pub fn open(&self, internal_encryption_key: Key) -> String {}
+    }
+
+    pub fn read_password(&self, internal_encryption_key: Key) -> String {
+        // Derive individual password key from internal encryption key and labels
+        // Decrypt password with individual password key
+    }
 }
