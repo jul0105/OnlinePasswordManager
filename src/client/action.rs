@@ -197,33 +197,6 @@ mod tests {
         assert_eq!(ErrorMessage::AuthFailed, session.unwrap_err());
     }
 
-    // #[test]
-    // fn test_login_failed_totp() {
-    //     let _db = DATABASE.lock().unwrap();
-    //     db.add_user(
-    //         "gil1@demo.ch",
-    //         &compute_password_hash("gil1@demo.ch", "coucou").server_auth_password,
-    //         Some("abcd"),
-    //     )
-    //     .unwrap();
-    //     let session = Session::login("gil1@demo.ch", "coucou", None);
-    //     assert!(session.is_err(), "{:?}", session);
-    //     assert_eq!(ErrorMessage::TotpRequired, session.unwrap_err());
-    // }
-    //
-    // #[test]
-    // fn test_login_totp_invalid() {
-    //     let _db = DATABASE.lock().unwrap();
-    //     db.add_user(
-    //         "gil2@demo.ch",
-    //         &compute_password_hash("gil2@demo.ch", "coucou").server_auth_password,
-    //         Some("abcd"),
-    //     )
-    //     .unwrap();
-    //     let session = Session::login("gil2@demo.ch", "coucou", Some("123456"));
-    //     assert!(session.is_err(), "{:?}", session);
-    //     assert_eq!(ErrorMessage::InvalidTotpCode, session.unwrap_err());
-    // }
 
     #[test]
     fn test_add_password() {
@@ -284,5 +257,31 @@ mod tests {
         assert!(password_entry2.is_ok());
         assert_eq!(password_entry2.unwrap().password, "4567");
 
+    }
+
+    #[test]
+    fn test_login_failed_totp() {
+        let _db = DATABASE.lock().unwrap();
+        let email = "test8@demo.com";
+        let password = "password123";
+        let register = Session::register(email, password, Some("abcd"));
+        assert!(register.is_ok());
+
+        let session = Session::login("test8@demo.com", "password123", None);
+        assert!(session.is_err(), "{:?}", session);
+        assert_eq!(ErrorMessage::TotpRequired, session.unwrap_err());
+    }
+
+    #[test]
+    fn test_login_totp_invalid() {
+        let _db = DATABASE.lock().unwrap();
+        let email = "test9@demo.com";
+        let password = "password123";
+        let register = Session::register(email, password, Some("abcd"));
+        assert!(register.is_ok());
+
+        let session = Session::login("test9@demo.com", "password123", Some("123456"));
+        assert!(session.is_err(), "{:?}", session);
+        assert_eq!(ErrorMessage::InvalidTotpCode, session.unwrap_err());
     }
 }
