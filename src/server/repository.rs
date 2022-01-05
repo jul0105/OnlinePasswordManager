@@ -7,15 +7,12 @@
 use super::models::*;
 use super::schema::*;
 use crate::common::error_message::ErrorMessage;
-use crate::server::authentication::password::hash;
 use crate::server::authentication::token::validate_token;
 use diesel::prelude::*;
 use diesel::{RunQueryDsl, update};
 use diesel::{insert_into, Connection, QueryResult, SqliteConnection};
 use std::env;
-use khape::{FileEntry, PreRegisterSecrets, EphemeralKeys, OutputKey};
-use serde::Serialize;
-use diesel::result::Error;
+use khape::{FileEntry, PreRegisterSecrets, EphemeralKeys};
 
 pub struct DatabaseConnection {
     pub conn: SqliteConnection,

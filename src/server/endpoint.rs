@@ -6,7 +6,7 @@
 
 use crate::common::error_message::ErrorMessage;
 
-use crate::server::authentication::{password, token, totp};
+use crate::server::authentication::{token, totp};
 
 use flate2::read::DeflateDecoder;
 use flate2::write::DeflateEncoder;
@@ -19,7 +19,6 @@ use std::path::Path;
 
 use super::repository::DatabaseConnection;
 use khape::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, RegisterRequest, RegisterResponse, RegisterFinish, Server, Parameters};
-use crate::server::authentication::token::generate_token_from_key;
 use crate::common::password_registry::ProtectedEnvelope;
 
 fn authenticate(
@@ -93,16 +92,6 @@ fn authenticate(
      */
 }
 
-/// Authenticate user to the server and generate session token
-///
-/// Return session token if successful authentication, Error message otherwise
-pub fn authentication(
-    email: &str,
-    password: &str,
-    totp_code: Option<&str>,
-) -> Result<String, ErrorMessage> {
-    authenticate(&DatabaseConnection::new(), email, password, totp_code)
-}
 
 pub fn login_khape_start(auth_request: AuthRequest) -> Result<AuthResponse, ErrorMessage> {
     let db = DatabaseConnection::new();

@@ -1,11 +1,9 @@
-use std::fmt::Display;
-
 use serde::{Deserialize, Serialize};
 use sodiumoxide::crypto::aead::{gen_nonce, gen_key, open, seal, Key, Nonce};
 
 use super::error_message::ErrorMessage;
 use hkdf::Hkdf;
-use sha3::{Digest, Sha3_256};
+use sha3::Sha3_256;
 
 type HkdfSha256 = Hkdf<Sha3_256>;
 const KEY_SIZE: usize = 32;

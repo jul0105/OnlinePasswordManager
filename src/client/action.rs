@@ -7,7 +7,6 @@
 use sodiumoxide::crypto::aead::Key;
 use khape::{Client, Parameters, ExportKey, OutputKey};
 
-use crate::client::hash::compute_password_hash;
 use crate::common::error_message::ErrorMessage;
 use crate::server::endpoint::{download,  upload, login_khape_start, login_khape_finish, register_khape_finish, register_khape_start};
 use crate::common::password_registry::{OpenedEnvelope, PasswordEntry};
@@ -144,7 +143,7 @@ mod tests {
 
     #[test]
     fn test_register() {
-        let db = DATABASE.lock().unwrap();
+        let _db = DATABASE.lock().unwrap();
         let email = "test0@demo.com";
         let password = "password123";
         let register = Session::register_khape(email, password);
@@ -153,7 +152,7 @@ mod tests {
 
     #[test]
     fn test_login() {
-        let db = DATABASE.lock().unwrap();
+        let _db = DATABASE.lock().unwrap();
         let email = "test1@demo.com";
         let password = "password123";
         let register = Session::register_khape(email, password);
@@ -165,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_login_with_wrong_password() {
-        let db = DATABASE.lock().unwrap();
+        let _db = DATABASE.lock().unwrap();
         let email = "test2@demo.com";
         let password1 = "password123";
         let password2 = "qwertz";
@@ -179,7 +178,7 @@ mod tests {
 
     #[test]
     fn test_login_failed() {
-        DATABASE.lock().ok();
+        let _db = DATABASE.lock().unwrap();
         let session = Session::login("test3@demo.ch", "password123", None);
         assert!(session.is_err(), "{:?}", session);
         assert_eq!(ErrorMessage::AuthFailed, session.unwrap_err());
@@ -187,7 +186,7 @@ mod tests {
 
     // #[test]
     // fn test_login_failed_totp() {
-    //     let db = DATABASE.lock().unwrap();
+    //     let _db = DATABASE.lock().unwrap();
     //     db.add_user(
     //         "gil1@demo.ch",
     //         &compute_password_hash("gil1@demo.ch", "coucou").server_auth_password,
@@ -201,7 +200,7 @@ mod tests {
     //
     // #[test]
     // fn test_login_totp_invalid() {
-    //     let db = DATABASE.lock().unwrap();
+    //     let _db = DATABASE.lock().unwrap();
     //     db.add_user(
     //         "gil2@demo.ch",
     //         &compute_password_hash("gil2@demo.ch", "coucou").server_auth_password,
@@ -215,7 +214,7 @@ mod tests {
 
     #[test]
     fn test_add_password() {
-        let db = DATABASE.lock().unwrap();
+        let _db = DATABASE.lock().unwrap();
         Session::register_khape("test4@demo.com", "password123");
         let mut session = Session::login("test4@demo.com", "password123", None).unwrap();
 
@@ -227,7 +226,7 @@ mod tests {
 
     #[test]
     fn test_delete_password() {
-        let db = DATABASE.lock().unwrap();
+        let _db = DATABASE.lock().unwrap();
         Session::register_khape("test5@demo.com", "password123");
         let mut session = Session::login("test5@demo.com", "password123", None).unwrap();
 
