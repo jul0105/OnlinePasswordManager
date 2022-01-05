@@ -29,7 +29,7 @@ impl Session {
     ) -> Result<Session, ErrorMessage> {
         let (session_key, ek) = Session::login_khape(email, password, totp_code)?;
         let session_token = base64::encode(session_key);
-        let export_key = Key::from_slice(ek.as_ref()).unwrap(); // TODO
+        let export_key = Key::from_slice(&ek).unwrap();
         let mut protected_envelope = download(&session_token)?;
 
         if protected_envelope.is_empty() {
