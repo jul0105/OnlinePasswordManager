@@ -558,7 +558,7 @@ checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 [[package]]
 name = "khape"
 version = "0.1.0"
-source = "git+https://github.com/jul0105/KHAPE.git#05bdb592c32c1bb6f5e23980e8aa5a82fcd21739"
+source = "git+https://github.com/jul0105/KHAPE.git#9fdba42cd148d35adc2c913c5e4a23b2c2258774"
 dependencies = [
  "argon2",
  "curve25519-dalek",
