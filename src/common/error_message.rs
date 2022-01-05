@@ -1,6 +1,9 @@
-// SEC : Labo project - Authentication
+// Online Password Manager
 // Author : Julien Béguin & Gil Balsiger
 // Date : 26.06.2021
+//
+// Modified on the 24.12.2021 by Julien Béguin
+// For Bachelor Thesis KHAPE use case
 //
 //! System's error message
 

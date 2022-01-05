@@ -1,3 +1,10 @@
+// Online Password Manager
+// Author : Julien Béguin
+// Date : 24.12.2021
+// For Bachelor Thesis KHAPE use case
+//
+//! Password registry encryption and key derivation
+
 use serde::{Deserialize, Serialize};
 use sodiumoxide::crypto::aead::{gen_nonce, gen_key, open, seal, Key, Nonce};
 
