@@ -355,7 +355,7 @@ fn handle_registration() {
         None
     };
 
-    match Session::register(&email, &password) {
+    match Session::register(&email, &password, totp_secret.as_deref()) {
         Ok(_) => println!("{}", style("Registration successful").green()),
         Err(e) => display_error(e),
     }

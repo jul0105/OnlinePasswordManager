@@ -27,7 +27,7 @@ impl Session {
         password: &str,
         totp_code: Option<&str>,
     ) -> Result<Session, ErrorMessage> {
-        let (session_key, ek) = Session::login_khape(email, password)?;
+        let (session_key, ek) = Session::login_khape(email, password, totp_code)?;
         let session_token = base64::encode(session_key);
         let export_key = Key::from_slice(ek.as_ref()).unwrap(); // TODO
         let mut protected_envelope = download(&session_token)?;
@@ -48,14 +48,14 @@ impl Session {
     /// Authentication with the server with KHAPE
     ///
     /// Return output key and export key if successfully authenticated
-    fn login_khape(email: &str, password: &str) -> Result<(OutputKey, ExportKey), ErrorMessage> {
+    fn login_khape(email: &str, password: &str, totp_code: Option<&str>) -> Result<(OutputKey, ExportKey), ErrorMessage> {
         let params = Parameters::default();
         let client = Client::new(params, String::from(email));
 
         let (auth_request, oprf_client_state) = client.auth_start(password.as_ref());
         let auth_response = login_khape_start(auth_request)?;
         let (auth_verify_request, ke_output, export_key) = client.auth_ke(auth_response, oprf_client_state);
-        let auth_verify_response = login_khape_finish(auth_verify_request)?;
+        let auth_verify_response = login_khape_finish(auth_verify_request, totp_code)?;
 
         match client.auth_finish(auth_verify_response, ke_output) {
             None => Err(ErrorMessage::AuthFailed),
@@ -64,12 +64,12 @@ impl Session {
     }
 
     /// Registration with the server with KHAPE
-    pub fn register(email: &str, password: &str) -> Result<(), ErrorMessage> {
+    pub fn register(email: &str, password: &str, totp_secret: Option<&str>) -> Result<(), ErrorMessage> {
         let params = Parameters::default();
         let client = Client::new(params, String::from(email));
 
         let (register_request, oprf_client_state) = client.register_start(password.as_ref());
-        let register_response = register_khape_start(register_request)?;
+        let register_response = register_khape_start(register_request, totp_secret)?;
         let (register_finish, _) = client.register_finish(register_response, oprf_client_state);
         register_khape_finish(register_finish)?;
 
@@ -159,7 +159,7 @@ mod tests {
         let _db = DATABASE.lock().unwrap();
         let email = "test0@demo.com";
         let password = "password123";
-        let register = Session::register(email, password);
+        let register = Session::register(email, password, None);
         assert!(register.is_ok());
     }
 
@@ -168,7 +168,7 @@ mod tests {
         let _db = DATABASE.lock().unwrap();
         let email = "test1@demo.com";
         let password = "password123";
-        let register = Session::register(email, password);
+        let register = Session::register(email, password, None);
         assert!(register.is_ok());
 
         let session = Session::login(email, password, None);
@@ -181,7 +181,7 @@ mod tests {
         let email = "test2@demo.com";
         let password1 = "password123";
         let password2 = "qwertz";
-        let register = Session::register(email, password1);
+        let register = Session::register(email, password1, None);
         assert!(register.is_ok());
 
         let session = Session::login(email, password2, None);
@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn test_add_password() {
         let _db = DATABASE.lock().unwrap();
-        Session::register("test4@demo.com", "password123");
+        Session::register("test4@demo.com", "password123", None);
         let mut session = Session::login("test4@demo.com", "password123", None).unwrap();
 
         assert_eq!(0, session.envelope.registry.entries.len());
@@ -240,7 +240,7 @@ mod tests {
     #[test]
     fn test_delete_password() {
         let _db = DATABASE.lock().unwrap();
-        Session::register("test5@demo.com", "password123");
+        Session::register("test5@demo.com", "password123", None);
         let mut session = Session::login("test5@demo.com", "password123", None).unwrap();
 
         session.add_password("hello", "demo", "1234").unwrap();
@@ -253,7 +253,7 @@ mod tests {
     #[test]
     fn test_read_password() {
         let _db = DATABASE.lock().unwrap();
-        Session::register("test6@demo.com", "password123");
+        Session::register("test6@demo.com", "password123", None);
         let mut session = Session::login("test6@demo.com", "password123", None).unwrap();
 
         session.add_password("hello", "demo", "1234").unwrap();
@@ -267,7 +267,7 @@ mod tests {
     #[test]
     fn test_modify_password() {
         let _db = DATABASE.lock().unwrap();
-        Session::register("test7@demo.com", "password123");
+        Session::register("test7@demo.com", "password123", None);
         let mut session = Session::login("test7@demo.com", "password123", None).unwrap();
 
         session.add_password("hello", "demo", "1234").unwrap();

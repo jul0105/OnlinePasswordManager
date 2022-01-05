@@ -105,7 +105,7 @@ pub fn login_khape_start(auth_request: AuthRequest) -> Result<AuthResponse, Erro
     Ok(auth_response)
 }
 
-pub fn login_khape_finish(auth_verify_request: AuthVerifyRequest) -> Result<AuthVerifyResponse, ErrorMessage> {
+pub fn login_khape_finish(auth_verify_request: AuthVerifyRequest, totp_code: Option<&str>) -> Result<AuthVerifyResponse, ErrorMessage> {
     let db = DatabaseConnection::new();
     let server = Server::new(Parameters::default());
     let uid = auth_verify_request.uid.clone();
@@ -120,17 +120,35 @@ pub fn login_khape_finish(auth_verify_request: AuthVerifyRequest) -> Result<Auth
         let user = db.get_user(&uid)?;
         let session_token = token::generate_token_from_key(user.id, session_key);
         db.user_add_session_key(&uid, &session_token);
+
+        // Check if the totp code match the user in DB
+        match user.totp_secret {
+            None => {} // Normal behavior. User opted out of 2FA
+            Some(secret) => match totp_code {
+                None => {
+                    warn!("User {} didn't provide a required TOTP code during authentication with the server", uid);
+                    return Err(ErrorMessage::TotpRequired);
+                }
+                Some(code) => {
+                    if !totp::verify_code(&secret, code) {
+                        warn!("User {} provided an invalid TOTP code during authentication with the server", uid);
+                        return Err(ErrorMessage::InvalidTotpCode);
+                    }
+                }
+            },
+        }
     }
+
     Ok(auth_verify_response)
 }
 
-pub fn register_khape_start(register_request: RegisterRequest) -> Result<RegisterResponse, ErrorMessage> {
+pub fn register_khape_start(register_request: RegisterRequest, totp_secret: Option<&str>) -> Result<RegisterResponse, ErrorMessage> {
     let db = DatabaseConnection::new();
     let server = Server::new(Parameters::default());
     let uid = register_request.uid.clone();
 
     let (register_response, pre_register_secrets) = server.register_start(register_request);
-    db.pre_register_user(&uid, pre_register_secrets);
+    db.pre_register_user(&uid, pre_register_secrets, totp_secret);
     Ok(register_response)
 }
 
@@ -257,46 +275,46 @@ fn store_protected_envelope(
     Ok(())
 }
 
-pub fn register_new_user(
-    email: &str,
-    password: &str,
-    totp_secret: Option<&str>,
-) -> Result<String, String> {
-    let db = DatabaseConnection::new();
-    match db.add_user(email, password, totp_secret) {
-        Ok(_) => {
-            info!("User {} successfully registered on the server", email);
-            return Ok(String::from("User successfully added"))
-        },
-        Err(e) => {
-            error!("Unable to register user {} on the server's DB", email);
-            return Err(format!(
-                "Error while adding the user: {}. Please try again",
-                e
-            ))
-        }
-    }
-}
+// pub fn register_new_user(
+//     email: &str,
+//     password: &str,
+//     totp_secret: Option<&str>,
+// ) -> Result<String, String> {
+//     let db = DatabaseConnection::new();
+//     match db.add_user(email, password, totp_secret) {
+//         Ok(_) => {
+//             info!("User {} successfully registered on the server", email);
+//             return Ok(String::from("User successfully added"))
+//         },
+//         Err(e) => {
+//             error!("Unable to register user {} on the server's DB", email);
+//             return Err(format!(
+//                 "Error while adding the user: {}. Please try again",
+//                 e
+//             ))
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::server::repository::tests::DATABASE;
 
-    #[test]
-    fn test_endpoints() {
-        let db = DATABASE.lock().unwrap();
-
-        // Register
-        let res = register_new_user("albert@heig-vd.ch", "123456789", None);
-        assert!(res.is_ok());
-        assert!(db.get_user("albert@heig-vd.ch").is_ok());
-
-        // Authenticate
-        let auth = authenticate(&db, "albert@heig-vd.ch", "123456789", None);
-        assert!(auth.is_ok(), "{:?}", auth);
-
-        assert!(authenticate(&db, "albert@he.ch", "123456789", None).is_err());
-        assert!(authenticate(&db, "albert@heig-vd.ch", "1234", None).is_err());
-    }
+    // #[test]
+    // fn test_endpoints() {
+    //     let db = DATABASE.lock().unwrap();
+    //
+    //     // Register
+    //     let res = register_new_user("albert@heig-vd.ch", "123456789", None);
+    //     assert!(res.is_ok());
+    //     assert!(db.get_user("albert@heig-vd.ch").is_ok());
+    //
+    //     // Authenticate
+    //     let auth = authenticate(&db, "albert@heig-vd.ch", "123456789", None);
+    //     assert!(auth.is_ok(), "{:?}", auth);
+    //
+    //     assert!(authenticate(&db, "albert@he.ch", "123456789", None).is_err());
+    //     assert!(authenticate(&db, "albert@heig-vd.ch", "1234", None).is_err());
+    // }
 }

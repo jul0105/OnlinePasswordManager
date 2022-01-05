@@ -26,13 +26,13 @@ impl DatabaseConnection {
         DatabaseConnection { conn }
     }
 
-    pub fn pre_register_user(&self, uid: &str, pre_register_secrets: PreRegisterSecrets) -> QueryResult<usize> {
+    pub fn pre_register_user(&self, uid: &str, pre_register_secrets: PreRegisterSecrets, totp_secret: Option<&str>) -> QueryResult<usize> {
         let serialized_value = serde_json::to_string(&pre_register_secrets).unwrap();
 
         let new_user = NewUser {
             email: uid,
             pre_register_secrets: Some(&serialized_value),
-            totp_secret: None
+            totp_secret,
         };
         // pre register user (incomplete, can be overridden)
         insert_into(users::table)
