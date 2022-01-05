@@ -26,23 +26,6 @@ impl DatabaseConnection {
         DatabaseConnection { conn }
     }
 
-    pub fn add_user(
-        &self,
-        email: &str,
-        password: &str,
-        totp_secret: Option<&str>,
-    ) -> QueryResult<usize> {
-        unimplemented!();
-        // let new_user = NewUser {
-        //     email,
-        //     password_hash: &hash(password),
-        //     totp_secret,
-        // };
-        // insert_into(users::table)
-        //     .values(&new_user)
-        //     .execute(&self.conn)
-    }
-
     pub fn pre_register_user(&self, uid: &str, pre_register_secrets: PreRegisterSecrets) -> QueryResult<usize> {
         let serialized_value = serde_json::to_string(&pre_register_secrets).unwrap();
 
@@ -170,29 +153,5 @@ pub mod tests {
 
             Mutex::new(DatabaseConnection { conn })
         };
-    }
-
-    #[test]
-    fn test_add_user() {
-        let result = DATABASE
-            .lock()
-            .unwrap()
-            .add_user("julien@heig-vd.com", "password hash", None);
-        assert!(result.is_ok(), "{:?}", result);
-    }
-
-    #[test]
-    fn test_user_token() {
-        let db = DATABASE.lock().unwrap();
-
-        db.add_user("gil@heig-vd.ch", "some password", None)
-            .unwrap();
-        let user_id = db.get_user("gil@heig-vd.ch").unwrap().id;
-        let token = token::generate_token(user_id);
-        let result = db.add_token(&token);
-        assert!(result.is_ok());
-        let user = db.get_user_from_token(&token.session_key);
-        assert!(user.is_ok(), "{:?}", user);
-        assert_eq!(user_id, user.unwrap().id);
     }
 }
