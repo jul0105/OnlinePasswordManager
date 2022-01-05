@@ -6,7 +6,7 @@
 
 use crate::client::action::Session;
 use crate::common::error_message::ErrorMessage;
-use crate::server::authentication::password::validate;
+use crate::client::password::validate;
 use crate::server::authentication::totp::{display_totp, generate_secret, verify_code};
 use console::style;
 use console::Emoji;
