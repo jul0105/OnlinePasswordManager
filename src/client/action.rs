@@ -9,7 +9,7 @@ use khape::{Client, Parameters, ExportKey, OutputKey};
 
 use crate::common::error_message::ErrorMessage;
 use crate::server::endpoint::{download,  upload, login_khape_start, login_khape_finish, register_khape_finish, register_khape_start};
-use crate::common::password_registry::{OpenedEnvelope, PasswordEntry};
+use crate::common::password_registry::{OpenedEnvelope, ProtectedPasswordEntry, PasswordEntry};
 
 #[derive(Debug)]
 pub struct Session {
@@ -45,6 +45,9 @@ impl Session {
         })
     }
 
+    /// Authentication with the server with KHAPE
+    ///
+    /// Return output key and export key if successfully authenticated
     fn login_khape(email: &str, password: &str) -> Result<(OutputKey, ExportKey), ErrorMessage> {
         let params = Parameters::default();
         let client = Client::new(params, String::from(email));
@@ -60,7 +63,8 @@ impl Session {
         }
     }
 
-    pub fn register_khape(email: &str, password: &str) -> Result<(), ErrorMessage> {
+    /// Registration with the server with KHAPE
+    pub fn register(email: &str, password: &str) -> Result<(), ErrorMessage> {
         let params = Parameters::default();
         let client = Client::new(params, String::from(email));
 
@@ -70,6 +74,14 @@ impl Session {
         register_khape_finish(register_finish)?;
 
         Ok(())
+    }
+
+    /// Read a password entry
+    pub fn read_password(
+        &self,
+        index: usize,
+    ) -> Result<PasswordEntry, ErrorMessage> {
+        self.envelope.registry.entries[index].open(&self.envelope.internal_encryption_key)
     }
 
     /// Add a new password to the password manager.
@@ -82,12 +94,13 @@ impl Session {
         username: &str,
         password: &str,
     ) -> Result<(), ErrorMessage> {
-        self.envelope.registry.entries.push(PasswordEntry::new(
-            label.to_owned(),
-            username.to_owned(),
-            password.to_owned(),
-            &self.envelope.internal_encryption_key
-        ));
+        let password_entry = PasswordEntry {
+            label: label.to_owned(),
+            username: username.to_owned(),
+            password: password.to_owned()
+        };
+
+        self.envelope.registry.entries.push(password_entry.seal(&self.envelope.internal_encryption_key));
         self.seal_and_send()
     }
 
@@ -146,7 +159,7 @@ mod tests {
         let _db = DATABASE.lock().unwrap();
         let email = "test0@demo.com";
         let password = "password123";
-        let register = Session::register_khape(email, password);
+        let register = Session::register(email, password);
         assert!(register.is_ok());
     }
 
@@ -155,7 +168,7 @@ mod tests {
         let _db = DATABASE.lock().unwrap();
         let email = "test1@demo.com";
         let password = "password123";
-        let register = Session::register_khape(email, password);
+        let register = Session::register(email, password);
         assert!(register.is_ok());
 
         let session = Session::login(email, password, None);
@@ -168,7 +181,7 @@ mod tests {
         let email = "test2@demo.com";
         let password1 = "password123";
         let password2 = "qwertz";
-        let register = Session::register_khape(email, password1);
+        let register = Session::register(email, password1);
         assert!(register.is_ok());
 
         let session = Session::login(email, password2, None);
@@ -215,7 +228,7 @@ mod tests {
     #[test]
     fn test_add_password() {
         let _db = DATABASE.lock().unwrap();
-        Session::register_khape("test4@demo.com", "password123");
+        Session::register("test4@demo.com", "password123");
         let mut session = Session::login("test4@demo.com", "password123", None).unwrap();
 
         assert_eq!(0, session.envelope.registry.entries.len());
@@ -227,7 +240,7 @@ mod tests {
     #[test]
     fn test_delete_password() {
         let _db = DATABASE.lock().unwrap();
-        Session::register_khape("test5@demo.com", "password123");
+        Session::register("test5@demo.com", "password123");
         let mut session = Session::login("test5@demo.com", "password123", None).unwrap();
 
         session.add_password("hello", "demo", "1234").unwrap();
@@ -235,5 +248,41 @@ mod tests {
         let res = session.delete_password(0);
         assert!(res.is_ok());
         assert_eq!(0, session.envelope.registry.entries.len());
+    }
+
+    #[test]
+    fn test_read_password() {
+        let _db = DATABASE.lock().unwrap();
+        Session::register("test6@demo.com", "password123");
+        let mut session = Session::login("test6@demo.com", "password123", None).unwrap();
+
+        session.add_password("hello", "demo", "1234").unwrap();
+        assert_eq!(1, session.envelope.registry.entries.len());
+
+        let password_entry = session.read_password(0);
+        assert!(password_entry.is_ok());
+        assert_eq!(password_entry.unwrap().password, "1234")
+    }
+
+    #[test]
+    fn test_modify_password() {
+        let _db = DATABASE.lock().unwrap();
+        Session::register("test7@demo.com", "password123");
+        let mut session = Session::login("test7@demo.com", "password123", None).unwrap();
+
+        session.add_password("hello", "demo", "1234").unwrap();
+        assert_eq!(1, session.envelope.registry.entries.len());
+
+
+        let password_entry = session.read_password(0);
+        assert!(password_entry.is_ok());
+        assert_eq!(password_entry.unwrap().password, "1234");
+
+        session.modify_password(0, "hello", "demo", "4567");
+
+        let password_entry2 = session.read_password(0);
+        assert!(password_entry2.is_ok());
+        assert_eq!(password_entry2.unwrap().password, "4567");
+
     }
 }

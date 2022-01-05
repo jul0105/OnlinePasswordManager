@@ -191,15 +191,14 @@ fn select_password_entry(registry: &IndexablePasswordRegistry) -> Option<usize> 
 fn read_password(session: &Session) {
     let selection = select_password_entry(&session.envelope.registry);
     if let Some(index) = selection {
-        let entry = session.envelope.registry.entries[index].clone();
 
-        match entry.read_password(&session.envelope.internal_encryption_key) {
-            Ok(password) => {
+        match session.read_password(index) {
+            Ok(entry) => {
                 println!(
                     "Label: {}\nUsername: {}\nPassword: {}",
                     entry.label,
                     entry.username,
-                    password
+                    entry.password
                 );
             },
             Err(e) => display_error(e),
@@ -356,7 +355,7 @@ fn handle_registration() {
         None
     };
 
-    match Session::register_khape(&email, &password) {
+    match Session::register(&email, &password) {
         Ok(_) => println!("{}", style("Registration successful").green()),
         Err(e) => display_error(e),
     }

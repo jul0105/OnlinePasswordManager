@@ -39,15 +39,22 @@ pub struct OpenedEnvelope {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct IndexablePasswordRegistry {
-    pub entries: Vec<PasswordEntry>,
+    pub entries: Vec<ProtectedPasswordEntry>,
     nonce: Nonce,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ProtectedPasswordEntry {
+    pub label: String,
+    pub username: String,
+    encrypted_password: EncryptedPassword,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PasswordEntry {
     pub label: String,
     pub username: String,
-    encrypted_password: EncryptedPassword,
+    pub password: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -231,32 +238,38 @@ fn derive_individual_password_key(label: &str, username: &str, internal_encrypti
 
 impl PasswordEntry {
     /// Create new password entry and encrypt password
-    pub fn new(label: String, username: String, password: String, internal_encryption_key: &Key) -> PasswordEntry {
+    pub fn seal(&self, internal_encryption_key: &Key) -> ProtectedPasswordEntry {
         // Derive individual password key from internal encryption key and labels
-        let individual_password_key = derive_individual_password_key(&label, &username, internal_encryption_key);
+        let individual_password_key = derive_individual_password_key(&self.label, &self.username, internal_encryption_key);
 
         // Encrypt password with individual password key
         let password_struct = Password {
-            password,
+            password: self.password.clone(),
             nonce: gen_nonce(),
         };
 
-        PasswordEntry {
-            label,
-            username,
+        ProtectedPasswordEntry {
+            label: self.label.clone(),
+            username: self.username.clone(),
             encrypted_password: password_struct.encrypt(&individual_password_key)
         }
     }
+}
 
+impl ProtectedPasswordEntry {
     /// Read a password entry's password
-    pub fn read_password(&self, internal_encryption_key: &Key) -> Result<String, ErrorMessage> {
+    pub fn open(&self, internal_encryption_key: &Key) -> Result<PasswordEntry, ErrorMessage> {
         // Derive individual password key from internal encryption key and labels
         let individual_password_key = derive_individual_password_key(&self.label, &self.username, internal_encryption_key);
 
         // Decrypt password with individual password key
         let password = self.encrypted_password.decrypt(&individual_password_key)?;
 
-        Ok(password.password)
+        Ok(PasswordEntry {
+            label: self.label.clone(),
+            username: self.username.clone(),
+            password: password.password,
+        })
     }
 }
 
@@ -321,17 +334,22 @@ mod tests {
         let password = "password";
         let key = gen_key();
 
-        let password_entry = PasswordEntry::new(String::from(label), String::from(username), String::from(password), &key);
+        let password_entry = PasswordEntry {
+            label: String::from(label),
+            username: String::from(username),
+            password: String::from(password),
+        };
 
-        assert_eq!(password_entry.label, label);
-        assert_eq!(password_entry.username, username);
-        assert_ne!(password_entry.encrypted_password.ciphertext, password.as_bytes());
+        let protected_password_entry = password_entry.seal(&key);
 
-        let password2 = password_entry.read_password(&key);
+        assert_eq!(password_entry.label, protected_password_entry.label);
+        assert_eq!(password_entry.username, protected_password_entry.username);
+        assert_ne!(password_entry.password.as_bytes(), protected_password_entry.encrypted_password.ciphertext);
 
-        assert!(password2.is_ok());
-        assert_eq!(password, password2.unwrap());
+        let password_entry2 = protected_password_entry.open(&key);
 
+        assert!(password_entry2.is_ok());
+        assert_eq!(password_entry, password_entry2.unwrap());
     }
 
     #[test]
@@ -343,14 +361,20 @@ mod tests {
         let key2 = gen_key();
         assert_ne!(key1, key2);
 
-        let password_entry = PasswordEntry::new(String::from(label), String::from(username), String::from(password), &key1);
+        let password_entry = PasswordEntry {
+            label: String::from(label),
+            username: String::from(username),
+            password: String::from(password),
+        };
 
-        assert_eq!(password_entry.label, label);
-        assert_eq!(password_entry.username, username);
-        assert_ne!(password_entry.encrypted_password.ciphertext, password.as_bytes());
+        let protected_password_entry = password_entry.seal(&key1);
 
-        let password2 = password_entry.read_password(&key2);
+        assert_eq!(password_entry.label, protected_password_entry.label);
+        assert_eq!(password_entry.username, protected_password_entry.username);
+        assert_ne!(password_entry.password.as_bytes(), protected_password_entry.encrypted_password.ciphertext);
 
-        assert!(password2.is_err());
+        let password_entry2 = protected_password_entry.open(&key2);
+
+        assert!(password_entry2.is_err());
     }
 }
