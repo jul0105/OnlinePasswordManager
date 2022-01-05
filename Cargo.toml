@@ -21,7 +21,6 @@ dialoguer = "0.8.0"
 console = "0.14.1"
 diesel = { version = "1.4.6", features = ["sqlite", "chrono"] }
 chrono = "0.4"
-argon2 = "0.2.0"
 google-authenticator = "0.2.1"
 qr_code = "1.1.0"
 log = "0.4.14"
