@@ -20,7 +20,6 @@ use std::path::Path;
 use super::repository::DatabaseConnection;
 use khape::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, RegisterRequest, RegisterResponse, RegisterFinish, Server, Parameters};
 use crate::common::password_registry::ProtectedEnvelope;
-use diesel::result::Error;
 
 
 pub fn login_khape_start(auth_request: AuthRequest) -> Result<AuthResponse, ErrorMessage> {

@@ -9,7 +9,7 @@ use khape::{Client, Parameters, ExportKey, OutputKey};
 
 use crate::common::error_message::ErrorMessage;
 use crate::server::endpoint::{download,  upload, login_khape_start, login_khape_finish, register_khape_finish, register_khape_start};
-use crate::common::password_registry::{OpenedEnvelope, ProtectedPasswordEntry, PasswordEntry};
+use crate::common::password_registry::{OpenedEnvelope, PasswordEntry};
 
 #[derive(Debug)]
 pub struct Session {
@@ -118,9 +118,9 @@ impl Session {
         if self.envelope.registry.entries.get(index).is_none() {
             return Err(ErrorMessage::PasswordEntryNotFound);
         }
-
-        self.delete_password(index);
-        self.add_password(label, username, password);
+        // TODO
+        self.delete_password(index)?;
+        self.add_password(label, username, password)?;
         self.seal_and_send()?;
         Ok(())
     }
@@ -201,7 +201,9 @@ mod tests {
     #[test]
     fn test_add_password() {
         let _db = DATABASE.lock().unwrap();
-        Session::register("test4@demo.com", "password123", None);
+        let result = Session::register("test4@demo.com", "password123", None);
+        assert!(result.is_ok());
+
         let mut session = Session::login("test4@demo.com", "password123", None).unwrap();
 
         assert_eq!(0, session.envelope.registry.entries.len());
@@ -213,7 +215,9 @@ mod tests {
     #[test]
     fn test_delete_password() {
         let _db = DATABASE.lock().unwrap();
-        Session::register("test5@demo.com", "password123", None);
+        let result = Session::register("test5@demo.com", "password123", None);
+        assert!(result.is_ok());
+
         let mut session = Session::login("test5@demo.com", "password123", None).unwrap();
 
         session.add_password("hello", "demo", "1234").unwrap();
@@ -226,7 +230,9 @@ mod tests {
     #[test]
     fn test_read_password() {
         let _db = DATABASE.lock().unwrap();
-        Session::register("test6@demo.com", "password123", None);
+        let result = Session::register("test6@demo.com", "password123", None);
+        assert!(result.is_ok());
+
         let mut session = Session::login("test6@demo.com", "password123", None).unwrap();
 
         session.add_password("hello", "demo", "1234").unwrap();
@@ -240,7 +246,9 @@ mod tests {
     #[test]
     fn test_modify_password() {
         let _db = DATABASE.lock().unwrap();
-        Session::register("test7@demo.com", "password123", None);
+        let result = Session::register("test7@demo.com", "password123", None);
+        assert!(result.is_ok());
+
         let mut session = Session::login("test7@demo.com", "password123", None).unwrap();
 
         session.add_password("hello", "demo", "1234").unwrap();
@@ -251,7 +259,7 @@ mod tests {
         assert!(password_entry.is_ok());
         assert_eq!(password_entry.unwrap().password, "1234");
 
-        session.modify_password(0, "hello", "demo", "4567");
+        session.modify_password(0, "hello", "demo", "4567").unwrap();
 
         let password_entry2 = session.read_password(0);
         assert!(password_entry2.is_ok());

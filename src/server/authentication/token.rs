@@ -5,8 +5,6 @@
 //! Random token generation and verification
 
 use chrono::{Duration, Utc};
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
 
 use crate::common::error_message::ErrorMessage;
 use crate::server::models::Token;
@@ -14,21 +12,6 @@ use log::{warn};
 
 // Token is valid during 24 hours minutes
 const VALIDITY_DURATION: i64 = 24 * 60 * 60;
-const TOKEN_LENGTH: usize = 64;
-
-/// Generate a new random token
-///
-/// Return Token struct
-pub fn generate_token(user_id: i32) -> Token {
-    // Generate random token
-    let session_key: String = thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(TOKEN_LENGTH)
-        .map(char::from)
-        .collect();
-
-    generate_token_from_key(user_id, session_key)
-}
 
 pub fn generate_token_from_key(user_id: i32, session_key: String) -> Token {
     // Validity date
@@ -57,6 +40,21 @@ pub fn validate_token(token: &Token) -> Result<(), ErrorMessage> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::distributions::Alphanumeric;
+    use rand::{thread_rng, Rng};
+
+    const TOKEN_LENGTH: usize = 32;
+
+    fn generate_token(user_id: i32) -> Token {
+        // Generate random token
+        let session_key: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(TOKEN_LENGTH)
+            .map(char::from)
+            .collect();
+
+        generate_token_from_key(user_id, session_key)
+    }
 
     #[test]
     fn test_generate_token() {

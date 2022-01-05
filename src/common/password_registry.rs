@@ -185,8 +185,10 @@ impl ProtectedEnvelope {
         let mut eek = vec![0u8; KEY_SIZE];
 
         let hk = HkdfSha256::new(None, master_key.as_ref());
-        hk.expand(STR_INTERNAL_ENCRYPTION_KEY, &mut iek);
-        hk.expand(STR_EXTERNAL_ENCRYPTION_KEY, &mut eek);
+        if hk.expand(STR_INTERNAL_ENCRYPTION_KEY, &mut iek).is_err() ||
+           hk.expand(STR_EXTERNAL_ENCRYPTION_KEY, &mut eek).is_err() {
+            return Err(ErrorMessage::DecryptionFailed);
+        }
 
         let internal_encryption_key = Key::from_slice(&iek).unwrap();
         let external_encryption_key = Key::from_slice(&eek).unwrap();
@@ -232,7 +234,7 @@ fn derive_individual_password_key(label: &str, username: &str, internal_encrypti
     let mut ipk = vec![0u8; KEY_SIZE];
 
     let hk = HkdfSha256::new(None, internal_encryption_key.as_ref());
-    hk.expand(&hkdf_label, &mut ipk);
+    hk.expand(&hkdf_label, &mut ipk).unwrap();
     Key::from_slice(&ipk).unwrap()
 }
 

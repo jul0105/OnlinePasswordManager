@@ -10,10 +10,9 @@ use crate::common::error_message::ErrorMessage;
 use crate::server::authentication::token::validate_token;
 use diesel::prelude::*;
 use diesel::{RunQueryDsl, update};
-use diesel::{insert_into, Connection, QueryResult, SqliteConnection};
+use diesel::{insert_into, Connection, SqliteConnection};
 use std::env;
 use khape::{FileEntry, PreRegisterSecrets, EphemeralKeys};
-use diesel::result::Error;
 
 pub struct DatabaseConnection {
     pub conn: SqliteConnection,
@@ -146,7 +145,6 @@ impl DatabaseConnection {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::server::authentication::token;
     use diesel::{Connection, SqliteConnection};
     use std::{
         fs::{create_dir, remove_dir_all},
