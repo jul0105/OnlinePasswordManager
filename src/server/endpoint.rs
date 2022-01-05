@@ -20,6 +20,7 @@ use std::path::Path;
 use super::repository::DatabaseConnection;
 use khape::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, RegisterRequest, RegisterResponse, RegisterFinish, Server, Parameters};
 use crate::common::password_registry::ProtectedEnvelope;
+use diesel::result::Error;
 
 fn authenticate(
     db: &DatabaseConnection,
@@ -101,7 +102,7 @@ pub fn login_khape_start(auth_request: AuthRequest) -> Result<AuthResponse, Erro
     let file_entry = db.user_get_file_entry(&uid)?;
 
     let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
-    db.user_add_ephemeral_keys(&uid, server_ephemeral_keys);
+    db.user_add_ephemeral_keys(&uid, server_ephemeral_keys)?;
     Ok(auth_response)
 }
 
@@ -119,7 +120,7 @@ pub fn login_khape_finish(auth_verify_request: AuthVerifyRequest, totp_code: Opt
         let session_key = base64::encode(server_output_key.unwrap());
         let user = db.get_user(&uid)?;
         let session_token = token::generate_token_from_key(user.id, session_key);
-        db.user_add_session_key(&uid, &session_token);
+        db.user_add_session_key(&uid, &session_token)?;
 
         // Check if the totp code match the user in DB
         match user.totp_secret {
@@ -148,7 +149,7 @@ pub fn register_khape_start(register_request: RegisterRequest, totp_secret: Opti
     let uid = register_request.uid.clone();
 
     let (register_response, pre_register_secrets) = server.register_start(register_request);
-    db.pre_register_user(&uid, pre_register_secrets, totp_secret);
+    db.pre_register_user(&uid, pre_register_secrets, totp_secret)?;
     Ok(register_response)
 }
 
@@ -161,7 +162,7 @@ pub fn register_khape_finish(register_finish: RegisterFinish) -> Result<(), Erro
 
     let file_entry = server.register_finish(register_finish, pre_register_secrets);
 
-    db.finish_register_user(&uid, file_entry);
+    db.finish_register_user(&uid, file_entry)?;
 
     Ok(())
 }

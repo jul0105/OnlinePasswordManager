@@ -34,4 +34,7 @@ pub enum ErrorMessage {
 
     #[strum(message = "Unable to found password entry.")]
     PasswordEntryNotFound,
+
+    #[strum(message = "Error while accessing the database.")]
+    DatabaseError,
 }

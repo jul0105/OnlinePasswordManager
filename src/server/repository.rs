@@ -13,6 +13,7 @@ use diesel::{RunQueryDsl, update};
 use diesel::{insert_into, Connection, QueryResult, SqliteConnection};
 use std::env;
 use khape::{FileEntry, PreRegisterSecrets, EphemeralKeys};
+use diesel::result::Error;
 
 pub struct DatabaseConnection {
     pub conn: SqliteConnection,
@@ -26,7 +27,7 @@ impl DatabaseConnection {
         DatabaseConnection { conn }
     }
 
-    pub fn pre_register_user(&self, uid: &str, pre_register_secrets: PreRegisterSecrets, totp_secret: Option<&str>) -> QueryResult<usize> {
+    pub fn pre_register_user(&self, uid: &str, pre_register_secrets: PreRegisterSecrets, totp_secret: Option<&str>) -> Result<(), ErrorMessage> {
         let serialized_value = serde_json::to_string(&pre_register_secrets).unwrap();
 
         let new_user = NewUser {
@@ -35,37 +36,46 @@ impl DatabaseConnection {
             totp_secret,
         };
         // pre register user (incomplete, can be overridden)
-        insert_into(users::table)
+        match insert_into(users::table)
             .values(&new_user)
-            .execute(&self.conn) // TODO override if incomplete register
+            .execute(&self.conn) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(ErrorMessage::DatabaseError)
+        }
     }
 
-    pub fn finish_register_user(&self, uid: &str, file_entry: FileEntry) -> QueryResult<usize> {
+    pub fn finish_register_user(&self, uid: &str, file_entry: FileEntry) -> Result<(), ErrorMessage> {
         let serialized_value = serde_json::to_string(&file_entry).unwrap();
 
         // finish register user (complete, cannot be overridden)
-        update(users::table.filter(users::email.eq(uid)))
+        match update(users::table.filter(users::email.eq(uid)))
             .set((users::file_entry.eq(serialized_value), users::pre_register_secrets.eq::<Option<String>>(None)))
-            .execute(&self.conn)
+            .execute(&self.conn) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(ErrorMessage::DatabaseError)
+        }
     }
 
-    pub fn user_add_ephemeral_keys(&self, uid: &str, ephemeral_keys: EphemeralKeys) -> QueryResult<usize> {
+    pub fn user_add_ephemeral_keys(&self, uid: &str, ephemeral_keys: EphemeralKeys) -> Result<(), ErrorMessage> {
         let serialized_value = serde_json::to_string(&ephemeral_keys).unwrap();
 
         // add ephemeral keys
-        update(users::table.filter(users::email.eq(uid)))
+        match update(users::table.filter(users::email.eq(uid)))
             .set(users::ephemeral_keys.eq(serialized_value))
-            .execute(&self.conn)
+            .execute(&self.conn) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(ErrorMessage::DatabaseError)
+        }
     }
 
-    pub fn user_add_session_key(&self, uid: &str, session_token: &Token) -> QueryResult<usize> {
+    pub fn user_add_session_key(&self, uid: &str, session_token: &Token) -> Result<(), ErrorMessage>{
         // remove ephemeral keys
-        update(users::table.filter(users::email.eq(uid)))
+        match update(users::table.filter(users::email.eq(uid)))
             .set(users::ephemeral_keys.eq::<Option<String>>(None))
-            .execute(&self.conn);
-
-        // add session key
-        self.add_token(session_token)
+            .execute(&self.conn) {
+            Err(_) => Err(ErrorMessage::DatabaseError),
+            Ok(_) => self.add_token(session_token) // add session key
+        }
     }
 
     pub fn user_get_file_entry(&self, uid: &str) -> Result<FileEntry, ErrorMessage> {
@@ -74,7 +84,7 @@ impl DatabaseConnection {
                 Ok(val) => Ok(val),
                 Err(_) => Err(ErrorMessage::DeserializeError)
             }
-            None => Err(ErrorMessage::ServerSideError)
+            None => Err(ErrorMessage::AuthFailed)
         }
     }
 
@@ -84,7 +94,7 @@ impl DatabaseConnection {
                 Ok(val) => Ok(val),
                 Err(_) => Err(ErrorMessage::DeserializeError)
             }
-            None => Err(ErrorMessage::ServerSideError)
+            None => Err(ErrorMessage::AuthFailed)
         }
     }
 
@@ -94,7 +104,7 @@ impl DatabaseConnection {
                 Ok(val) => Ok(val),
                 Err(_) => Err(ErrorMessage::DeserializeError)
             }
-            None => Err(ErrorMessage::ServerSideError)
+            None => Err(ErrorMessage::AuthFailed)
         }
     }
 
@@ -107,10 +117,13 @@ impl DatabaseConnection {
         }
     }
 
-    pub fn add_token(&self, new_token: &Token) -> QueryResult<usize> {
+    pub fn add_token(&self, new_token: &Token) -> Result<(), ErrorMessage> {
         use super::schema::tokens::dsl::*;
 
-        insert_into(tokens).values(new_token).execute(&self.conn)
+        match insert_into(tokens).values(new_token).execute(&self.conn) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(ErrorMessage::DatabaseError)
+        }
     }
 
     pub fn get_user_from_token(&self, given_token: &str) -> Result<User, ErrorMessage> {
