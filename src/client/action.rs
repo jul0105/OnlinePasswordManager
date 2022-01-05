@@ -118,9 +118,16 @@ impl Session {
         if self.envelope.registry.entries.get(index).is_none() {
             return Err(ErrorMessage::PasswordEntryNotFound);
         }
-        // TODO
-        self.delete_password(index)?;
-        self.add_password(label, username, password)?;
+
+        let entry = PasswordEntry {
+            label: label.to_owned(),
+            username: username.to_owned(),
+            password: password.to_owned()
+        };
+
+        let protected_entry = entry.seal(&self.envelope.internal_encryption_key);
+        self.envelope.registry.entries[index] = protected_entry;
+        
         self.seal_and_send()?;
         Ok(())
     }
