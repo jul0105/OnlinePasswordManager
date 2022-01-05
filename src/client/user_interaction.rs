@@ -104,7 +104,7 @@ fn ask_password() -> String {
 
 fn ask_totp_code() -> String {
     Input::<String>::with_theme(&ColorfulTheme::default())
-        .with_prompt("Enter 6 digits code")
+        .with_prompt("Enter 6 digits code (2FA)")
         .interact_text()
         .unwrap()
 }

@@ -24,7 +24,7 @@ pub fn qr_code_url_from_secret(secret: &str, email: &str) -> String {
     google_authenticator::qr_code_url!(
         secret,
         email,
-        "SEC Labo 2",
+        "Online Password Manager",
         0,
         0,
         ErrorCorrectionLevel::Medium
@@ -40,7 +40,7 @@ pub fn verify_code(secret: &str, code: &str) -> bool {
 
 pub fn display_totp(email: &str, secret: &str) {
     let qr_code = QrCode::new(format!(
-        "otpauth://totp/{}?secret={}&issuer=SEC Password manager",
+        "otpauth://totp/{}?secret={}&issuer=Online Password Manager",
         email, secret
     ))
     .unwrap();
