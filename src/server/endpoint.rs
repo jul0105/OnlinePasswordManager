@@ -22,77 +22,6 @@ use khape::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, Re
 use crate::common::password_registry::ProtectedEnvelope;
 use diesel::result::Error;
 
-fn authenticate(
-    db: &DatabaseConnection,
-    email: &str,
-    password: &str,
-    totp_code: Option<&str>,
-) -> Result<String, ErrorMessage> {
-    unimplemented!();
-    /*
-
-    // The entire authentication process is executed, even if invalid, to try to mitigate timing attack
-    let mut result = Ok(String::from(""));
-
-    // Get user from DB
-    let user = match db.get_user(email) {
-        Ok(user) => user,
-        Err(_) => {
-            warn!("User {} is not present in DB.", email);
-
-            // Fake Argon2 for timing attacks
-            password::verify("$argon2id$v=19$m=4096,t=3,p=1$spbfQIc9BCO2mWdMRMp3iQ$+tJffBAuOCQqKbVa9Db2P+zrQd6YbdTzxg41jY20odY", "demo");
-
-            return Err(ErrorMessage::AuthFailed);
-        }
-    };
-
-    // Hash password
-    if !password::verify(&user.password_hash, password) {
-        warn!(
-            "User {} failed to authenticate with the server. Incorrect password",
-            email
-        );
-        return Err(ErrorMessage::AuthFailed);
-    }
-
-    // Check if the totp code match the user in DB
-    match user.totp_secret {
-        None => {} // Normal behavior. User opted out of 2FA
-        Some(secret) => match totp_code {
-            None => {
-                result = Err(ErrorMessage::TotpRequired);
-                warn!("User {} didn't provide a required TOTP code during authentication with the server", email);
-            }
-            Some(code) => {
-                if !totp::verify_code(&secret, code) {
-                    result = Err(ErrorMessage::InvalidTotpCode);
-                    warn!("User {} provided an invalid TOTP code during authentication with the server", email);
-                }
-            }
-        },
-    }
-
-    if result.is_ok() {
-        // If yes, generate and return a session token
-        let token = token::generate_token(user.id);
-
-        // Store whole token in DB
-        if db.add_token(&token).is_err() {
-            error!("Unable to store user {}'s session token in the server's DB.", user.email);
-            return Err(ErrorMessage::ServerSideError);
-        }
-
-        info!("User {} successfully authenticated with the server.", email);
-        Ok(token.token)
-    } else {
-        // If no, return a generic error message
-        result
-    }
-
-     */
-}
-
 
 pub fn login_khape_start(auth_request: AuthRequest) -> Result<AuthResponse, ErrorMessage> {
     let db = DatabaseConnection::new();
@@ -103,6 +32,8 @@ pub fn login_khape_start(auth_request: AuthRequest) -> Result<AuthResponse, Erro
 
     let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
     db.user_add_ephemeral_keys(&uid, server_ephemeral_keys)?;
+
+    info!("User {} completed authentication start on the server", uid);
     Ok(auth_response)
 }
 
@@ -140,6 +71,7 @@ pub fn login_khape_finish(auth_verify_request: AuthVerifyRequest, totp_code: Opt
         }
     }
 
+    info!("User {} successfully authenticated (finish) on the server", uid);
     Ok(auth_verify_response)
 }
 
@@ -150,6 +82,8 @@ pub fn register_khape_start(register_request: RegisterRequest, totp_secret: Opti
 
     let (register_response, pre_register_secrets) = server.register_start(register_request);
     db.pre_register_user(&uid, pre_register_secrets, totp_secret)?;
+
+    info!("User {} completed register start on the server", uid);
     Ok(register_response)
 }
 
@@ -164,6 +98,7 @@ pub fn register_khape_finish(register_finish: RegisterFinish) -> Result<(), Erro
 
     db.finish_register_user(&uid, file_entry)?;
 
+    info!("User {} successfully registered (finish) on the server", uid);
     Ok(())
 }
 
@@ -274,48 +209,4 @@ fn store_protected_envelope(
 
     info!("Successful store of protected envelope of userid {} on the server", user_id);
     Ok(())
-}
-
-// pub fn register_new_user(
-//     email: &str,
-//     password: &str,
-//     totp_secret: Option<&str>,
-// ) -> Result<String, String> {
-//     let db = DatabaseConnection::new();
-//     match db.add_user(email, password, totp_secret) {
-//         Ok(_) => {
-//             info!("User {} successfully registered on the server", email);
-//             return Ok(String::from("User successfully added"))
-//         },
-//         Err(e) => {
-//             error!("Unable to register user {} on the server's DB", email);
-//             return Err(format!(
-//                 "Error while adding the user: {}. Please try again",
-//                 e
-//             ))
-//         }
-//     }
-// }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::server::repository::tests::DATABASE;
-
-    // #[test]
-    // fn test_endpoints() {
-    //     let db = DATABASE.lock().unwrap();
-    //
-    //     // Register
-    //     let res = register_new_user("albert@heig-vd.ch", "123456789", None);
-    //     assert!(res.is_ok());
-    //     assert!(db.get_user("albert@heig-vd.ch").is_ok());
-    //
-    //     // Authenticate
-    //     let auth = authenticate(&db, "albert@heig-vd.ch", "123456789", None);
-    //     assert!(auth.is_ok(), "{:?}", auth);
-    //
-    //     assert!(authenticate(&db, "albert@he.ch", "123456789", None).is_err());
-    //     assert!(authenticate(&db, "albert@heig-vd.ch", "1234", None).is_err());
-    // }
 }
