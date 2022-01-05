@@ -663,6 +663,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "online_password_manager"
+version = "0.1.0"
+dependencies = [
+ "argon2 0.2.1",
+ "base64",
+ "bincode",
+ "chrono",
+ "console",
+ "dialoguer",
+ "diesel",
+ "diesel_migrations",
+ "dotenv",
+ "flate2",
+ "google-authenticator",
+ "hkdf",
+ "khape",
+ "lazy_static",
+ "log",
+ "qr_code",
+ "rand 0.8.4",
+ "rand_core 0.6.2",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha3",
+ "simplelog",
+ "sodiumoxide",
+ "structopt",
+ "strum",
+ "zxcvbn",
+]
+
+[[package]]
 name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -883,39 +916,6 @@ name = "ryu"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c9613b5a66ab9ba26415184cfc41156594925a9cf3a2057e57f31ff145f6568"
-
-[[package]]
-name = "sec_project"
-version = "0.1.0"
-dependencies = [
- "argon2 0.2.1",
- "base64",
- "bincode",
- "chrono",
- "console",
- "dialoguer",
- "diesel",
- "diesel_migrations",
- "dotenv",
- "flate2",
- "google-authenticator",
- "hkdf",
- "khape",
- "lazy_static",
- "log",
- "qr_code",
- "rand 0.8.4",
- "rand_core 0.6.2",
- "regex",
- "serde",
- "serde_json",
- "sha3",
- "simplelog",
- "sodiumoxide",
- "structopt",
- "strum",
- "zxcvbn",
-]
 
 [[package]]
 name = "serde"
